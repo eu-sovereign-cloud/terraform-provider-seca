@@ -1,5 +1,5 @@
 provider "seca" {
-  token  = "test-token"  
+  token  = "test-token"
   tenant = "tenant-1"
   region = "region-1"
   providers = {
@@ -28,10 +28,10 @@ data "seca_network_sku" "network_sku" {
 resource "seca_network" "network" {
   name         = "network-1"
   workspace_id = seca_workspace.workspace.id
- 
+
   sku_id = data.seca_network_sku.network_sku.id
   cidr = {
-      ipv4 = "10.100.0.0/16"
+    ipv4 = "10.100.0.0/16"
   }
   route_table_id = seca_route_table.route_table.id # circular reference ?
 }
@@ -40,11 +40,11 @@ resource "seca_route_table" "route_table" {
   name         = "route-table-1"
   workspace_id = seca_workspace.workspace.id
   network_id   = seca_network.network.id # circular reference ?
- 
+
   routes = [
     {
       destination_cidr_block = "0.0.0.0/0"
-      target_id = seca_internet_gateway.internet_gateway.id
+      target_id              = seca_internet_gateway.internet_gateway.id
     }
   ]
 }
@@ -55,7 +55,7 @@ resource "seca_subnet" "subnet" {
   network_id   = seca_network.network.id
 
   cidr = {
-      ipv4 = "10.100.1.0/24"
+    ipv4 = "10.100.1.0/24"
   }
 }
 
@@ -66,7 +66,7 @@ resource "seca_security_group" "security_group" {
   rules = [
     {
       direction = "ingress"
-      protocol = "tcp"
+      protocol  = "tcp"
       ports = {
         list = [80, 443]
       }
@@ -74,7 +74,7 @@ resource "seca_security_group" "security_group" {
     },
     {
       direction = "ingress"
-      protocol = "tcp"
+      protocol  = "tcp"
       ports = {
         from = 22
       }
@@ -118,7 +118,7 @@ resource "seca_image" "image" {
   name = "image-1"
 
   block_storage_id = seca_block_storage.image_storage.id
-  cpu_architecture = "amd64"  
+  cpu_architecture = "amd64"
   initializer      = "cloudinit-22"
   boot             = "UEFI"
 }
@@ -131,9 +131,9 @@ resource "seca_block_storage" "instance_storage" {
   name         = "block-storage-1"
   workspace_id = seca_workspace.workspace.id
 
-  size_gb          = 10
-  sku_id           = data.seca_storage_sku.storage_sku.id
-  source_image_id  = seca_image.image.id
+  size_gb         = 10
+  sku_id          = data.seca_storage_sku.storage_sku.id
+  source_image_id = seca_image.image.id
 }
 
 # Compute
@@ -148,7 +148,7 @@ resource "seca_instance" "instance" {
 
   sku_id         = data.seca_instance_sku.instance_sku.id
   primary_nic_id = seca_nic.nic.id
-  ssh_keys = ["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl example@secapi.cloud"]
+  ssh_keys       = ["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl example@secapi.cloud"]
 
   boot_volume = {
     device_id = seca_block_storage.instance_storage.id
