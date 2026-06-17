@@ -1,0 +1,78 @@
+{
+  "version": "0.1",
+  "provider": {
+    "name": "seca"
+  },
+  "datasources": [
+    {
+      "name": "seca_instance_sku",
+      "schema": {
+        "attributes": [
+          {
+            "name": "provider",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "tenant",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "labels",
+            "map": {
+              "computed_optional_required": "computed",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "annotations",
+            "map": {
+              "computed_optional_required": "computed",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "extensions",
+            "map": {
+              "computed_optional_required": "computed",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "name",
+            "string": {
+              "computed_optional_required": "required"
+            }
+          },
+          {
+            "name": "vcpu",
+            "int64": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "ram",
+            "int64": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "state",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,174 @@
+{
+  "version": "0.1",
+  "provider": {
+    "name": "seca"
+  },
+  "datasources": [
+    {
+      "name": "seca_public_ip",
+      "schema": {
+        "attributes": [
+          {
+            "name": "provider",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "tenant",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "workspace",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "labels",
+            "map": {
+              "computed_optional_required": "computed",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "annotations",
+            "map": {
+              "computed_optional_required": "computed",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "extensions",
+            "map": {
+              "computed_optional_required": "computed",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "name",
+            "string": {
+              "computed_optional_required": "required"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "string": {
+              "computed_optional_required": "optional"
+            }
+          },
+          {
+            "name": "version",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "address",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "attached_to",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "ip_address",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "state",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "resources": [
+    {
+      "name": "seca_public_ip",
+      "schema": {
+        "attributes": [
+          {
+            "name": "labels",
+            "map": {
+              "computed_optional_required": "optional",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "annotations",
+            "map": {
+              "computed_optional_required": "optional",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "extensions",
+            "map": {
+              "computed_optional_required": "optional",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "name",
+            "string": {
+              "computed_optional_required": "required"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "string": {
+              "computed_optional_required": "required"
+            }
+          },
+          {
+            "name": "provider",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "tenant",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "version",
+            "string": {
+              "computed_optional_required": "required"
+            }
+          },
+          {
+            "name": "address",
+            "string": {
+              "computed_optional_required": "optional"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

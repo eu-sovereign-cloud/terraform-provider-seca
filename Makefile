@@ -2,6 +2,9 @@ GO := go
 TOOLS_GOMOD := -modfile=./tools/go.mod
 GO_TOOL := $(GO) run $(TOOLS_GOMOD) -mod=mod
 
+TF_CODEGEN_SPEC_DIR := ./config/codegen/
+TF_CODEGEN_GENERATED_DIR := ./pkg/terraform
+
 .PHONY: build
 build:
 	@echo "Building..."
@@ -12,6 +15,12 @@ install: build
 	@echo "Installing..."
 	go install -v ./...
 
+.PHONY: update
+update:
+	@echo "Updating submodules..."
+	git pull --recurse-submodules
+	git submodule update --remote --recursive
+
 .PHONY: lint
 lint:
 	@echo "Linting..."
@@ -21,6 +30,26 @@ lint:
 generate:
 	@echo "Generating documentation..."
 	cd tools; go generate ./...
+
+.PHONY: codegen
+codegen:
+	@for spec in $(TF_CODEGEN_SPEC_DIR)*.json; do \
+		name=$$(basename $$spec .json); \
+		pkg=$$(echo $$name | tr -cd '[:alnum:]'); \
+		echo "Generating Terraform code from $$spec..."; \
+		mkdir -p $(TF_CODEGEN_GENERATED_DIR)/$$name; \
+		$(GO_TOOL) github.com/hashicorp/terraform-plugin-codegen-framework/cmd/tfplugingen-framework generate resources \
+			--input $$spec \
+			--output $(TF_CODEGEN_GENERATED_DIR)/$$name || exit 1; \
+		$(GO_TOOL) github.com/hashicorp/terraform-plugin-codegen-framework/cmd/tfplugingen-framework generate data-sources \
+			--input $$spec \
+			--output $(TF_CODEGEN_GENERATED_DIR)/$$name || exit 1; \
+	done
+
+.PHONY: clean
+clean:
+	@echo "Cleaning..."
+	rm -rf $(TF_CODEGEN_GENERATED_DIR)/*
 
 .PHONY: fmt
 fmt:

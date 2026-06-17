@@ -1,0 +1,226 @@
+{
+  "version": "0.1",
+  "provider": {
+    "name": "seca"
+  },
+  "datasources": [
+    {
+      "name": "seca_subnet",
+      "schema": {
+        "attributes": [
+          {
+            "name": "provider",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "tenant",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "workspace",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "labels",
+            "map": {
+              "computed_optional_required": "computed",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "annotations",
+            "map": {
+              "computed_optional_required": "computed",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "extensions",
+            "map": {
+              "computed_optional_required": "computed",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "name",
+            "string": {
+              "computed_optional_required": "required"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "string": {
+              "computed_optional_required": "optional"
+            }
+          },
+          {
+            "name": "network_id",
+            "string": {
+              "computed_optional_required": "optional"
+            }
+          },
+          {
+            "name": "cidr",
+            "single_nested": {
+              "computed_optional_required": "computed",
+              "attributes": [
+                {
+                  "name": "ipv4",
+                  "string": {
+                    "computed_optional_required": "computed"
+                  }
+                },
+                {
+                  "name": "ipv6",
+                  "string": {
+                    "computed_optional_required": "computed"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "zone",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "route_table_id",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "sku_id",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "state",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "resources": [
+    {
+      "name": "seca_subnet",
+      "schema": {
+        "attributes": [
+          {
+            "name": "labels",
+            "map": {
+              "computed_optional_required": "optional",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "annotations",
+            "map": {
+              "computed_optional_required": "optional",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "extensions",
+            "map": {
+              "computed_optional_required": "optional",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "name",
+            "string": {
+              "computed_optional_required": "required"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "string": {
+              "computed_optional_required": "required"
+            }
+          },
+          {
+            "name": "network_id",
+            "string": {
+              "computed_optional_required": "required"
+            }
+          },
+          {
+            "name": "provider",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "tenant",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "cidr",
+            "single_nested": {
+              "computed_optional_required": "required",
+              "attributes": [
+                {
+                  "name": "ipv4",
+                  "string": {
+                    "computed_optional_required": "optional"
+                  }
+                },
+                {
+                  "name": "ipv6",
+                  "string": {
+                    "computed_optional_required": "optional"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "zone",
+            "string": {
+              "computed_optional_required": "required"
+            }
+          },
+          {
+            "name": "route_table_id",
+            "string": {
+              "computed_optional_required": "optional"
+            }
+          },
+          {
+            "name": "sku_id",
+            "string": {
+              "computed_optional_required": "optional"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

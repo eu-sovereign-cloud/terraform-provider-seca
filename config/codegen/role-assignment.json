@@ -1,0 +1,230 @@
+{
+  "version": "0.1",
+  "provider": {
+    "name": "seca"
+  },
+  "datasources": [
+    {
+      "name": "seca_role_assignment",
+      "schema": {
+        "attributes": [
+          {
+            "name": "provider",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "tenant",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "labels",
+            "map": {
+              "computed_optional_required": "computed",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "annotations",
+            "map": {
+              "computed_optional_required": "computed",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "extensions",
+            "map": {
+              "computed_optional_required": "computed",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "name",
+            "string": {
+              "computed_optional_required": "required"
+            }
+          },
+          {
+            "name": "subs",
+            "list": {
+              "computed_optional_required": "computed",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "scopes",
+            "list_nested": {
+              "computed_optional_required": "computed",
+              "nested_object": {
+                "attributes": [
+                  {
+                    "name": "tenants",
+                    "list": {
+                      "computed_optional_required": "computed",
+                      "element_type": {
+                        "string": {}
+                      }
+                    }
+                  },
+                  {
+                    "name": "regions",
+                    "list": {
+                      "computed_optional_required": "computed",
+                      "element_type": {
+                        "string": {}
+                      }
+                    }
+                  },
+                  {
+                    "name": "workspaces",
+                    "list": {
+                      "computed_optional_required": "computed",
+                      "element_type": {
+                        "string": {}
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "roles",
+            "list": {
+              "computed_optional_required": "computed",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "state",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "resources": [
+    {
+      "name": "seca_role_assignment",
+      "schema": {
+        "attributes": [
+          {
+            "name": "labels",
+            "map": {
+              "computed_optional_required": "optional",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "annotations",
+            "map": {
+              "computed_optional_required": "optional",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "extensions",
+            "map": {
+              "computed_optional_required": "optional",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "name",
+            "string": {
+              "computed_optional_required": "required"
+            }
+          },
+          {
+            "name": "provider",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "tenant",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "subs",
+            "list": {
+              "computed_optional_required": "required",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "scopes",
+            "list_nested": {
+              "computed_optional_required": "required",
+              "nested_object": {
+                "attributes": [
+                  {
+                    "name": "tenants",
+                    "list": {
+                      "computed_optional_required": "optional",
+                      "element_type": {
+                        "string": {}
+                      }
+                    }
+                  },
+                  {
+                    "name": "regions",
+                    "list": {
+                      "computed_optional_required": "optional",
+                      "element_type": {
+                        "string": {}
+                      }
+                    }
+                  },
+                  {
+                    "name": "workspaces",
+                    "list": {
+                      "computed_optional_required": "optional",
+                      "element_type": {
+                        "string": {}
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "roles",
+            "list": {
+              "computed_optional_required": "required",
+              "element_type": {
+                "string": {}
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

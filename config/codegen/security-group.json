@@ -1,0 +1,328 @@
+{
+  "version": "0.1",
+  "provider": {
+    "name": "seca"
+  },
+  "datasources": [
+    {
+      "name": "seca_security_group",
+      "schema": {
+        "attributes": [
+          {
+            "name": "provider",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "tenant",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "workspace",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "labels",
+            "map": {
+              "computed_optional_required": "computed",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "annotations",
+            "map": {
+              "computed_optional_required": "computed",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "extensions",
+            "map": {
+              "computed_optional_required": "computed",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "name",
+            "string": {
+              "computed_optional_required": "required"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "string": {
+              "computed_optional_required": "optional"
+            }
+          },
+          {
+            "name": "rules",
+            "list_nested": {
+              "computed_optional_required": "computed",
+              "nested_object": {
+                "attributes": [
+                  {
+                    "name": "direction",
+                    "string": {
+                      "computed_optional_required": "computed"
+                    }
+                  },
+                  {
+                    "name": "version",
+                    "string": {
+                      "computed_optional_required": "computed"
+                    }
+                  },
+                  {
+                    "name": "protocol",
+                    "string": {
+                      "computed_optional_required": "computed"
+                    }
+                  },
+                  {
+                    "name": "ports",
+                    "single_nested": {
+                      "computed_optional_required": "computed",
+                      "attributes": [
+                        {
+                          "name": "from",
+                          "int64": {
+                            "computed_optional_required": "computed"
+                          }
+                        },
+                        {
+                          "name": "to",
+                          "int64": {
+                            "computed_optional_required": "computed"
+                          }
+                        },
+                        {
+                          "name": "list",
+                          "list": {
+                            "computed_optional_required": "computed",
+                            "element_type": {
+                              "int64": {}
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "name": "icmp",
+                    "single_nested": {
+                      "computed_optional_required": "computed",
+                      "attributes": [
+                        {
+                          "name": "type",
+                          "int64": {
+                            "computed_optional_required": "computed"
+                          }
+                        },
+                        {
+                          "name": "code",
+                          "int64": {
+                            "computed_optional_required": "computed"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "name": "source_refs",
+                    "list": {
+                      "computed_optional_required": "computed",
+                      "element_type": {
+                        "string": {}
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "rule_refs",
+            "list": {
+              "computed_optional_required": "computed",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "state",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "resources": [
+    {
+      "name": "seca_security_group",
+      "schema": {
+        "attributes": [
+          {
+            "name": "labels",
+            "map": {
+              "computed_optional_required": "optional",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "annotations",
+            "map": {
+              "computed_optional_required": "optional",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "extensions",
+            "map": {
+              "computed_optional_required": "optional",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "name",
+            "string": {
+              "computed_optional_required": "required"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "string": {
+              "computed_optional_required": "required"
+            }
+          },
+          {
+            "name": "provider",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "tenant",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "rules",
+            "list_nested": {
+              "computed_optional_required": "optional",
+              "nested_object": {
+                "attributes": [
+                  {
+                    "name": "direction",
+                    "string": {
+                      "computed_optional_required": "required"
+                    }
+                  },
+                  {
+                    "name": "version",
+                    "string": {
+                      "computed_optional_required": "optional"
+                    }
+                  },
+                  {
+                    "name": "protocol",
+                    "string": {
+                      "computed_optional_required": "optional"
+                    }
+                  },
+                  {
+                    "name": "ports",
+                    "single_nested": {
+                      "computed_optional_required": "optional",
+                      "attributes": [
+                        {
+                          "name": "from",
+                          "int64": {
+                            "computed_optional_required": "optional"
+                          }
+                        },
+                        {
+                          "name": "to",
+                          "int64": {
+                            "computed_optional_required": "optional"
+                          }
+                        },
+                        {
+                          "name": "list",
+                          "list": {
+                            "computed_optional_required": "optional",
+                            "element_type": {
+                              "int64": {}
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "name": "icmp",
+                    "single_nested": {
+                      "computed_optional_required": "optional",
+                      "attributes": [
+                        {
+                          "name": "type",
+                          "int64": {
+                            "computed_optional_required": "required"
+                          }
+                        },
+                        {
+                          "name": "code",
+                          "int64": {
+                            "computed_optional_required": "required"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "name": "source_refs",
+                    "list": {
+                      "computed_optional_required": "optional",
+                      "element_type": {
+                        "string": {}
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "rule_refs",
+            "list": {
+              "computed_optional_required": "optional",
+              "element_type": {
+                "string": {}
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

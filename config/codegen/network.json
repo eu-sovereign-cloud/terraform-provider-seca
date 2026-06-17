@@ -1,0 +1,246 @@
+{
+  "version": "0.1",
+  "provider": {
+    "name": "seca"
+  },
+  "datasources": [
+    {
+      "name": "seca_network",
+      "schema": {
+        "attributes": [
+          {
+            "name": "provider",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "tenant",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "workspace",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "labels",
+            "map": {
+              "computed_optional_required": "computed",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "annotations",
+            "map": {
+              "computed_optional_required": "computed",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "extensions",
+            "map": {
+              "computed_optional_required": "computed",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "name",
+            "string": {
+              "computed_optional_required": "required"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "string": {
+              "computed_optional_required": "optional"
+            }
+          },
+          {
+            "name": "sku_id",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "cidr",
+            "single_nested": {
+              "computed_optional_required": "computed",
+              "attributes": [
+                {
+                  "name": "ipv4",
+                  "string": {
+                    "computed_optional_required": "computed"
+                  }
+                },
+                {
+                  "name": "ipv6",
+                  "string": {
+                    "computed_optional_required": "computed"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "additional_cidrs",
+            "list_nested": {
+              "computed_optional_required": "computed",
+              "nested_object": {
+                "attributes": [
+                  {
+                    "name": "ipv4",
+                    "string": {
+                      "computed_optional_required": "computed"
+                    }
+                  },
+                  {
+                    "name": "ipv6",
+                    "string": {
+                      "computed_optional_required": "computed"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "route_table_id",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "state",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "resources": [
+    {
+      "name": "seca_network",
+      "schema": {
+        "attributes": [
+          {
+            "name": "labels",
+            "map": {
+              "computed_optional_required": "optional",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "annotations",
+            "map": {
+              "computed_optional_required": "optional",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "extensions",
+            "map": {
+              "computed_optional_required": "optional",
+              "element_type": {
+                "string": {}
+              }
+            }
+          },
+          {
+            "name": "name",
+            "string": {
+              "computed_optional_required": "required"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "string": {
+              "computed_optional_required": "required"
+            }
+          },
+          {
+            "name": "provider",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "tenant",
+            "string": {
+              "computed_optional_required": "computed"
+            }
+          },
+          {
+            "name": "sku_id",
+            "string": {
+              "computed_optional_required": "required"
+            }
+          },
+          {
+            "name": "cidr",
+            "single_nested": {
+              "computed_optional_required": "required",
+              "attributes": [
+                {
+                  "name": "ipv4",
+                  "string": {
+                    "computed_optional_required": "optional"
+                  }
+                },
+                {
+                  "name": "ipv6",
+                  "string": {
+                    "computed_optional_required": "optional"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "additional_cidrs",
+            "list_nested": {
+              "computed_optional_required": "optional",
+              "nested_object": {
+                "attributes": [
+                  {
+                    "name": "ipv4",
+                    "string": {
+                      "computed_optional_required": "optional"
+                    }
+                  },
+                  {
+                    "name": "ipv6",
+                    "string": {
+                      "computed_optional_required": "optional"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "route_table_id",
+            "string": {
+              "computed_optional_required": "required"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
