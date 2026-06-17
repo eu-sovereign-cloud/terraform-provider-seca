@@ -96,6 +96,7 @@ resource "seca_nic" "nic" {
   name         = "nic-1"
   workspace_id = seca_workspace.workspace.id
   subnet_id    = seca_subnet.subnet.id
+
   addresses    = ["0.0.0.0"]
   public_ip_id = seca_public_ip.public_ip.id
 }
@@ -148,6 +149,7 @@ resource "seca_instance" "instance" {
 
   sku_id         = data.seca_instance_sku.instance_sku.id
   primary_nic_id = seca_nic.nic.id
+  zone           = "a"
   ssh_keys       = ["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl example@secapi.cloud"]
 
   boot_volume = {
