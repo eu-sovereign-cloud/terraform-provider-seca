@@ -44,19 +44,8 @@ func (r *WorkspaceResource) ImportState(ctx context.Context, req resource.Import
 	resource.ImportStatePassthroughID(ctx, path.Root("name"), req, resp)
 }
 
-type WorkspaceModel struct {
-	Id               types.String `tfsdk:"id"`
-	Name             types.String `tfsdk:"name"`
-	Tenant           types.String `tfsdk:"tenant"`
-	Region           types.String `tfsdk:"region"`
-	ResourceProvider types.String `tfsdk:"resource_provider"`
-	CreatedAt        types.String `tfsdk:"created_at"`
-	DeletedAt        types.String `tfsdk:"deleted_at"`
-	LastModifiedAt   types.String `tfsdk:"last_modified_at"`
-
-	Labels      types.Map `tfsdk:"labels"`
-	Annotations types.Map `tfsdk:"annotations"`
-	Extensions  types.Map `tfsdk:"extensions"`
+type WorkspaceResourceModel struct {
+	workspaceModel
 
 	Retry *RetryModel `tfsdk:"retry"`
 }
@@ -83,12 +72,6 @@ func (resource *WorkspaceResource) Schema(_ context.Context, _ resource.SchemaRe
 				},
 			},
 			"region": tfschema.StringAttribute{
-				Computed: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"resource_provider": tfschema.StringAttribute{
 				Computed: true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -154,14 +137,14 @@ func (r *WorkspaceResource) Configure(ctx context.Context, req resource.Configur
 	tflog.Debug(ctx, "configured workspace resource")
 }
 
-func (r *WorkspaceResource) logFields(ctx context.Context, data WorkspaceModel) context.Context {
+func (r *WorkspaceResource) logFields(ctx context.Context, data WorkspaceResourceModel) context.Context {
 	ctx = tflog.SetField(ctx, "tenant_id", r.tenant)
 	ctx = tflog.SetField(ctx, "name", data.Name.ValueString())
 	return ctx
 }
 
 func (resource *WorkspaceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data WorkspaceModel
+	var data WorkspaceResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -223,7 +206,7 @@ func (resource *WorkspaceResource) Create(ctx context.Context, req resource.Crea
 }
 
 func (resource *WorkspaceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data WorkspaceModel
+	var data WorkspaceResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -262,7 +245,7 @@ func (resource *WorkspaceResource) Read(ctx context.Context, req resource.ReadRe
 }
 
 func (resource *WorkspaceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data WorkspaceModel
+	var data WorkspaceResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -324,7 +307,7 @@ func (resource *WorkspaceResource) Update(ctx context.Context, req resource.Upda
 }
 
 func (resource *WorkspaceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data WorkspaceModel
+	var data WorkspaceResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -374,31 +357,7 @@ func (resource *WorkspaceResource) Delete(ctx context.Context, req resource.Dele
 	tflog.Info(ctx, "workspace deleted")
 }
 
-func workspaceToResourceModel(ctx context.Context, workspace *sdk.Workspace) (WorkspaceModel, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	model := WorkspaceModel{}
-	model.Id = types.StringValue(workspace.Metadata.Ref)
-
-	model.Name = types.StringValue(workspace.Metadata.Name)
-	model.Tenant = types.StringValue(workspace.Metadata.Tenant)
-	model.Region = types.StringValue(workspace.Metadata.Region)
-	model.ResourceProvider = refToResourceProvider(workspace.Metadata.Ref)
-	model.CreatedAt = fromTime(workspace.Metadata.CreatedAt)
-	model.DeletedAt = fromTimePtr(workspace.Metadata.DeletedAt)
-	model.LastModifiedAt = fromTime(workspace.Metadata.LastModifiedAt)
-
-	labels, d := fromStringMap(ctx, workspace.Labels)
-	diags.Append(d...)
-	model.Labels = labels
-
-	annotations, d := fromStringMap(ctx, workspace.Annotations)
-	diags.Append(d...)
-	model.Annotations = annotations
-
-	extensions, d := fromStringMap(ctx, workspace.Extensions)
-	diags.Append(d...)
-	model.Extensions = extensions
-
-	return model, diags
+func workspaceToResourceModel(ctx context.Context, workspace *sdk.Workspace) (WorkspaceResourceModel, diag.Diagnostics) {
+	common, diags := workspaceFromSdk(ctx, workspace)
+	return WorkspaceResourceModel{workspaceModel: common}, diags
 }

@@ -44,24 +44,8 @@ func (r *ImageResource) ImportState(ctx context.Context, req resource.ImportStat
 	resource.ImportStatePassthroughID(ctx, path.Root("name"), req, resp)
 }
 
-type ImageModel struct {
-	Id               types.String `tfsdk:"id"`
-	Name             types.String `tfsdk:"name"`
-	Tenant           types.String `tfsdk:"tenant"`
-	Region           types.String `tfsdk:"region"`
-	ResourceProvider types.String `tfsdk:"resource_provider"`
-	CreatedAt        types.String `tfsdk:"created_at"`
-	DeletedAt        types.String `tfsdk:"deleted_at"`
-	LastModifiedAt   types.String `tfsdk:"last_modified_at"`
-
-	Labels      types.Map `tfsdk:"labels"`
-	Annotations types.Map `tfsdk:"annotations"`
-	Extensions  types.Map `tfsdk:"extensions"`
-
-	BlockStorageId  types.String `tfsdk:"block_storage_id"`
-	CpuArchitecture types.String `tfsdk:"cpu_architecture"`
-	Initializer     types.String `tfsdk:"initializer"`
-	Boot            types.String `tfsdk:"boot"`
+type ImageResourceModel struct {
+	imageModel
 
 	Retry *RetryModel `tfsdk:"retry"`
 }
@@ -88,12 +72,6 @@ func (resource *ImageResource) Schema(_ context.Context, _ resource.SchemaReques
 				},
 			},
 			"region": tfschema.StringAttribute{
-				Computed: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"resource_provider": tfschema.StringAttribute{
 				Computed: true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -173,14 +151,14 @@ func (r *ImageResource) Configure(ctx context.Context, req resource.ConfigureReq
 	tflog.Debug(ctx, "configured image resource")
 }
 
-func (r *ImageResource) logFields(ctx context.Context, data ImageModel) context.Context {
+func (r *ImageResource) logFields(ctx context.Context, data ImageResourceModel) context.Context {
 	ctx = tflog.SetField(ctx, "tenant_id", r.tenant)
 	ctx = tflog.SetField(ctx, "name", data.Name.ValueString())
 	return ctx
 }
 
 func (resource *ImageResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data ImageModel
+	var data ImageResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -234,7 +212,7 @@ func (resource *ImageResource) Create(ctx context.Context, req resource.CreateRe
 }
 
 func (resource *ImageResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data ImageModel
+	var data ImageResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -273,7 +251,7 @@ func (resource *ImageResource) Read(ctx context.Context, req resource.ReadReques
 }
 
 func (resource *ImageResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data ImageModel
+	var data ImageResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -327,7 +305,7 @@ func (resource *ImageResource) Update(ctx context.Context, req resource.UpdateRe
 }
 
 func (resource *ImageResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data ImageModel
+	var data ImageResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -377,7 +355,7 @@ func (resource *ImageResource) Delete(ctx context.Context, req resource.DeleteRe
 	tflog.Info(ctx, "image deleted")
 }
 
-func imageFromModel(tenant string, data ImageModel) *sdk.Image {
+func imageFromModel(tenant string, data ImageResourceModel) *sdk.Image {
 	image := &sdk.Image{
 		Metadata: &sdk.RegionalResourceMetadata{
 			Tenant: tenant,
@@ -404,36 +382,7 @@ func imageFromModel(tenant string, data ImageModel) *sdk.Image {
 	return image
 }
 
-func imageToResourceModel(ctx context.Context, image *sdk.Image) (ImageModel, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	model := ImageModel{}
-	model.Id = types.StringValue(image.Metadata.Ref)
-
-	model.Name = types.StringValue(image.Metadata.Name)
-	model.Tenant = types.StringValue(image.Metadata.Tenant)
-	model.Region = types.StringValue(image.Metadata.Region)
-	model.ResourceProvider = refToResourceProvider(image.Metadata.Ref)
-	model.CreatedAt = fromTime(image.Metadata.CreatedAt)
-	model.DeletedAt = fromTimePtr(image.Metadata.DeletedAt)
-	model.LastModifiedAt = fromTime(image.Metadata.LastModifiedAt)
-
-	labels, d := fromStringMap(ctx, image.Labels)
-	diags.Append(d...)
-	model.Labels = labels
-
-	annotations, d := fromStringMap(ctx, image.Annotations)
-	diags.Append(d...)
-	model.Annotations = annotations
-
-	extensions, d := fromStringMap(ctx, image.Extensions)
-	diags.Append(d...)
-	model.Extensions = extensions
-
-	model.BlockStorageId = types.StringValue(image.Spec.BlockStorageRef.Resource)
-	model.CpuArchitecture = types.StringValue(string(image.Spec.CpuArchitecture))
-	model.Initializer = types.StringValue(string(image.Spec.Initializer))
-	model.Boot = types.StringValue(string(image.Spec.Boot))
-
-	return model, diags
+func imageToResourceModel(ctx context.Context, image *sdk.Image) (ImageResourceModel, diag.Diagnostics) {
+	common, diags := imageFromSdk(ctx, image)
+	return ImageResourceModel{imageModel: common}, diags
 }

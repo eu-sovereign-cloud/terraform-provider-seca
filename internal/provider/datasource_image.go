@@ -33,23 +33,7 @@ func (d *ImageDataSource) Metadata(_ context.Context, req datasource.MetadataReq
 }
 
 type ImageDataSourceModel struct {
-	Id               types.String `tfsdk:"id"`
-	Name             types.String `tfsdk:"name"`
-	Tenant           types.String `tfsdk:"tenant"`
-	Region           types.String `tfsdk:"region"`
-	ResourceProvider types.String `tfsdk:"resource_provider"`
-	CreatedAt        types.String `tfsdk:"created_at"`
-	DeletedAt        types.String `tfsdk:"deleted_at"`
-	LastModifiedAt   types.String `tfsdk:"last_modified_at"`
-
-	Labels      types.Map `tfsdk:"labels"`
-	Annotations types.Map `tfsdk:"annotations"`
-	Extensions  types.Map `tfsdk:"extensions"`
-
-	BlockStorageId  types.String `tfsdk:"block_storage_id"`
-	CpuArchitecture types.String `tfsdk:"cpu_architecture"`
-	Initializer     types.String `tfsdk:"initializer"`
-	Boot            types.String `tfsdk:"boot"`
+	imageModel
 
 	State types.String `tfsdk:"state"`
 }
@@ -67,9 +51,6 @@ func (d *ImageDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 				Computed: true,
 			},
 			"region": tfschema.StringAttribute{
-				Computed: true,
-			},
-			"resource_provider": tfschema.StringAttribute{
 				Computed: true,
 			},
 			"created_at": tfschema.StringAttribute{
@@ -169,37 +150,8 @@ func (d *ImageDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 }
 
 func imageToDataSourceModel(ctx context.Context, image *sdk.Image) (ImageDataSourceModel, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	model := ImageDataSourceModel{}
-	model.Id = types.StringValue(image.Metadata.Ref)
-
-	model.Name = types.StringValue(image.Metadata.Name)
-	model.Tenant = types.StringValue(image.Metadata.Tenant)
-	model.Region = types.StringValue(image.Metadata.Region)
-	model.ResourceProvider = refToResourceProvider(image.Metadata.Ref)
-	model.CreatedAt = fromTime(image.Metadata.CreatedAt)
-	model.DeletedAt = fromTimePtr(image.Metadata.DeletedAt)
-	model.LastModifiedAt = fromTime(image.Metadata.LastModifiedAt)
-
-	labels, d := fromStringMap(ctx, image.Labels)
-	diags.Append(d...)
-	model.Labels = labels
-
-	annotations, d := fromStringMap(ctx, image.Annotations)
-	diags.Append(d...)
-	model.Annotations = annotations
-
-	extensions, d := fromStringMap(ctx, image.Extensions)
-	diags.Append(d...)
-	model.Extensions = extensions
-
-	model.BlockStorageId = types.StringValue(image.Spec.BlockStorageRef.Resource)
-	model.CpuArchitecture = types.StringValue(string(image.Spec.CpuArchitecture))
-	model.Initializer = types.StringValue(string(image.Spec.Initializer))
-	model.Boot = types.StringValue(string(image.Spec.Boot))
-
+	common, diags := imageFromSdk(ctx, image)
+	model := ImageDataSourceModel{imageModel: common}
 	model.State = types.StringValue(string(image.Status.State))
-
 	return model, diags
 }

@@ -9,6 +9,152 @@ import (
 	sdk "github.com/eu-sovereign-cloud/go-sdk/pkg/spec/schema"
 )
 
+type blockStorageModel struct {
+	Id             types.String `tfsdk:"id"`
+	Name           types.String `tfsdk:"name"`
+	WorkspaceId    types.String `tfsdk:"workspace_id"`
+	Tenant         types.String `tfsdk:"tenant"`
+	Region         types.String `tfsdk:"region"`
+	CreatedAt      types.String `tfsdk:"created_at"`
+	DeletedAt      types.String `tfsdk:"deleted_at"`
+	LastModifiedAt types.String `tfsdk:"last_modified_at"`
+
+	Labels      types.Map `tfsdk:"labels"`
+	Annotations types.Map `tfsdk:"annotations"`
+	Extensions  types.Map `tfsdk:"extensions"`
+
+	SizeGB        types.Int64  `tfsdk:"size_gb"`
+	SkuId         types.String `tfsdk:"sku_id"`
+	SourceImageId types.String `tfsdk:"source_image_id"`
+}
+
+func blockStorageFromSdk(ctx context.Context, block *sdk.BlockStorage) (blockStorageModel, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	model := blockStorageModel{}
+	model.Id = types.StringValue(block.Metadata.Ref)
+
+	model.Name = types.StringValue(block.Metadata.Name)
+	model.WorkspaceId = types.StringValue(block.Metadata.Workspace)
+	model.Tenant = types.StringValue(block.Metadata.Tenant)
+	model.Region = types.StringValue(block.Metadata.Region)
+	model.CreatedAt = fromTime(block.Metadata.CreatedAt)
+	model.DeletedAt = fromTimePtr(block.Metadata.DeletedAt)
+	model.LastModifiedAt = fromTime(block.Metadata.LastModifiedAt)
+
+	labels, d := fromStringMap(ctx, block.Labels)
+	diags.Append(d...)
+	model.Labels = labels
+
+	annotations, d := fromStringMap(ctx, block.Annotations)
+	diags.Append(d...)
+	model.Annotations = annotations
+
+	extensions, d := fromStringMap(ctx, block.Extensions)
+	diags.Append(d...)
+	model.Extensions = extensions
+
+	model.SizeGB = types.Int64Value(int64(block.Spec.SizeGB))
+	model.SkuId = types.StringValue(block.Spec.SkuRef.Resource)
+	model.SourceImageId = fromRefPtr(block.Spec.SourceImageRef)
+
+	return model, diags
+}
+
+type imageModel struct {
+	Id             types.String `tfsdk:"id"`
+	Name           types.String `tfsdk:"name"`
+	Tenant         types.String `tfsdk:"tenant"`
+	Region         types.String `tfsdk:"region"`
+	CreatedAt      types.String `tfsdk:"created_at"`
+	DeletedAt      types.String `tfsdk:"deleted_at"`
+	LastModifiedAt types.String `tfsdk:"last_modified_at"`
+
+	Labels      types.Map `tfsdk:"labels"`
+	Annotations types.Map `tfsdk:"annotations"`
+	Extensions  types.Map `tfsdk:"extensions"`
+
+	BlockStorageId  types.String `tfsdk:"block_storage_id"`
+	CpuArchitecture types.String `tfsdk:"cpu_architecture"`
+	Initializer     types.String `tfsdk:"initializer"`
+	Boot            types.String `tfsdk:"boot"`
+}
+
+func imageFromSdk(ctx context.Context, image *sdk.Image) (imageModel, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	model := imageModel{}
+	model.Id = types.StringValue(image.Metadata.Ref)
+
+	model.Name = types.StringValue(image.Metadata.Name)
+	model.Tenant = types.StringValue(image.Metadata.Tenant)
+	model.Region = types.StringValue(image.Metadata.Region)
+	model.CreatedAt = fromTime(image.Metadata.CreatedAt)
+	model.DeletedAt = fromTimePtr(image.Metadata.DeletedAt)
+	model.LastModifiedAt = fromTime(image.Metadata.LastModifiedAt)
+
+	labels, d := fromStringMap(ctx, image.Labels)
+	diags.Append(d...)
+	model.Labels = labels
+
+	annotations, d := fromStringMap(ctx, image.Annotations)
+	diags.Append(d...)
+	model.Annotations = annotations
+
+	extensions, d := fromStringMap(ctx, image.Extensions)
+	diags.Append(d...)
+	model.Extensions = extensions
+
+	model.BlockStorageId = types.StringValue(image.Spec.BlockStorageRef.Resource)
+	model.CpuArchitecture = types.StringValue(string(image.Spec.CpuArchitecture))
+	model.Initializer = types.StringValue(string(image.Spec.Initializer))
+	model.Boot = types.StringValue(string(image.Spec.Boot))
+
+	return model, diags
+}
+
+type workspaceModel struct {
+	Id             types.String `tfsdk:"id"`
+	Name           types.String `tfsdk:"name"`
+	Tenant         types.String `tfsdk:"tenant"`
+	Region         types.String `tfsdk:"region"`
+	CreatedAt      types.String `tfsdk:"created_at"`
+	DeletedAt      types.String `tfsdk:"deleted_at"`
+	LastModifiedAt types.String `tfsdk:"last_modified_at"`
+
+	Labels      types.Map `tfsdk:"labels"`
+	Annotations types.Map `tfsdk:"annotations"`
+	Extensions  types.Map `tfsdk:"extensions"`
+}
+
+func workspaceFromSdk(ctx context.Context, workspace *sdk.Workspace) (workspaceModel, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	model := workspaceModel{}
+	model.Id = types.StringValue(workspace.Metadata.Ref)
+
+	model.Name = types.StringValue(workspace.Metadata.Name)
+	model.Tenant = types.StringValue(workspace.Metadata.Tenant)
+	model.Region = types.StringValue(workspace.Metadata.Region)
+	model.CreatedAt = fromTime(workspace.Metadata.CreatedAt)
+	model.DeletedAt = fromTimePtr(workspace.Metadata.DeletedAt)
+	model.LastModifiedAt = fromTime(workspace.Metadata.LastModifiedAt)
+
+	labels, d := fromStringMap(ctx, workspace.Labels)
+	diags.Append(d...)
+	model.Labels = labels
+
+	annotations, d := fromStringMap(ctx, workspace.Annotations)
+	diags.Append(d...)
+	model.Annotations = annotations
+
+	extensions, d := fromStringMap(ctx, workspace.Extensions)
+	diags.Append(d...)
+	model.Extensions = extensions
+
+	return model, diags
+}
+
 type networkModel struct {
 	Id               types.String `tfsdk:"id"`
 	Name             types.String `tfsdk:"name"`
