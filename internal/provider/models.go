@@ -28,7 +28,7 @@ type blockStorageModel struct {
 	SourceImageId types.String `tfsdk:"source_image_id"`
 }
 
-func blockStorageFromSdk(ctx context.Context, block *sdk.BlockStorage) (blockStorageModel, diag.Diagnostics) {
+func blockStorageToBaseModel(ctx context.Context, block *sdk.BlockStorage) (blockStorageModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	model := blockStorageModel{}
@@ -80,7 +80,7 @@ type imageModel struct {
 	Boot            types.String `tfsdk:"boot"`
 }
 
-func imageFromSdk(ctx context.Context, image *sdk.Image) (imageModel, diag.Diagnostics) {
+func imageToBaseModel(ctx context.Context, image *sdk.Image) (imageModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	model := imageModel{}
@@ -127,7 +127,7 @@ type workspaceModel struct {
 	Extensions  types.Map `tfsdk:"extensions"`
 }
 
-func workspaceFromSdk(ctx context.Context, workspace *sdk.Workspace) (workspaceModel, diag.Diagnostics) {
+func workspaceToBaseModel(ctx context.Context, workspace *sdk.Workspace) (workspaceModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	model := workspaceModel{}

@@ -358,6 +358,6 @@ func (resource *WorkspaceResource) Delete(ctx context.Context, req resource.Dele
 }
 
 func workspaceToResourceModel(ctx context.Context, workspace *sdk.Workspace) (WorkspaceResourceModel, diag.Diagnostics) {
-	common, diags := workspaceFromSdk(ctx, workspace)
+	common, diags := workspaceToBaseModel(ctx, workspace)
 	return WorkspaceResourceModel{workspaceModel: common}, diags
 }

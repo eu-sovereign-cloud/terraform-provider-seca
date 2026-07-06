@@ -401,6 +401,6 @@ func blockStorageFromModel(tenant string, data BlockStorageResourceModel) *sdk.B
 }
 
 func blockStorageToResourceModel(ctx context.Context, block *sdk.BlockStorage) (BlockStorageResourceModel, diag.Diagnostics) {
-	common, diags := blockStorageFromSdk(ctx, block)
+	common, diags := blockStorageToBaseModel(ctx, block)
 	return BlockStorageResourceModel{blockStorageModel: common}, diags
 }

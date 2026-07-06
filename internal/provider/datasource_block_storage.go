@@ -152,7 +152,7 @@ func (d *BlockStorageDataSource) Read(ctx context.Context, req datasource.ReadRe
 }
 
 func blockStorageToDataSourceModel(ctx context.Context, block *sdk.BlockStorage) (BlockStorageDataSourceModel, diag.Diagnostics) {
-	common, diags := blockStorageFromSdk(ctx, block)
+	common, diags := blockStorageToBaseModel(ctx, block)
 	model := BlockStorageDataSourceModel{blockStorageModel: common}
 	model.State = types.StringValue(string(block.Status.State))
 	return model, diags

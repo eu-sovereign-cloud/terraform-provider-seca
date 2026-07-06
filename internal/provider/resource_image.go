@@ -383,6 +383,6 @@ func imageFromModel(tenant string, data ImageResourceModel) *sdk.Image {
 }
 
 func imageToResourceModel(ctx context.Context, image *sdk.Image) (ImageResourceModel, diag.Diagnostics) {
-	common, diags := imageFromSdk(ctx, image)
+	common, diags := imageToBaseModel(ctx, image)
 	return ImageResourceModel{imageModel: common}, diags
 }

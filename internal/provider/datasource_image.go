@@ -150,7 +150,7 @@ func (d *ImageDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 }
 
 func imageToDataSourceModel(ctx context.Context, image *sdk.Image) (ImageDataSourceModel, diag.Diagnostics) {
-	common, diags := imageFromSdk(ctx, image)
+	common, diags := imageToBaseModel(ctx, image)
 	model := ImageDataSourceModel{imageModel: common}
 	model.State = types.StringValue(string(image.Status.State))
 	return model, diags

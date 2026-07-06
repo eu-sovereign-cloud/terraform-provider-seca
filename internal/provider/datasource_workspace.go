@@ -138,7 +138,7 @@ func (d *WorkspaceDataSource) Read(ctx context.Context, req datasource.ReadReque
 }
 
 func workspaceToDataSourceModel(ctx context.Context, workspace *sdk.Workspace) (WorkspaceDataSourceModel, diag.Diagnostics) {
-	common, diags := workspaceFromSdk(ctx, workspace)
+	common, diags := workspaceToBaseModel(ctx, workspace)
 	model := WorkspaceDataSourceModel{workspaceModel: common}
 	model.State = types.StringValue(string(workspace.Status.State))
 	return model, diags
