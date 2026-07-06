@@ -41,7 +41,7 @@ The `sdk` alias is always used for `go-sdk/pkg/spec/schema`. The `tfschema` alia
 
 - Resource types: `XxxResource` (PascalCase, singular noun)
 - Model types: `XxxModel` (for resources), `XxxDataSourceModel` (for data sources)
-- Private helpers: `xxxFromModel`, `xxxToResourceModel`, `xxxToDataSourceModel` (camelCase)
+- Private helpers: `xxxFromModel`, `xxxToBaseModel`, `xxxToResourceModel`, `xxxToDataSourceModel` (camelCase)
 - Constructor functions: `newXxxResource()`, `newXxxDataSource()`
 - Avoid abbreviations unless they are domain terms (e.g., `sku`, `nic`)
 
@@ -76,22 +76,56 @@ result, _ := r.client.StorageV1.CreateOrUpdateBlockStorage(ctx, block)
 
 ## Mapping Functions
 
-Each resource/data source file defines private mapping functions at the bottom:
+When a resource and its data source share fields, the shared fields live in a **base model** and the SDK→model mapping lives in a single **`xxxToBaseModel`** function in `models.go`. The resource and data source models embed the base model and add only their own fields. This avoids duplicating the metadata/label/spec mapping across the two files.
+
+`models.go` — base model and shared mapper:
 
 ```go
-// SDK type → resource Terraform model
-func xxxToResourceModel(ctx context.Context, obj *sdk.Xxx) (XxxModel, diag.Diagnostics)
+type xxxModel struct { /* shared fields: id, name, tenant, region, labels, spec... */ }
 
-// SDK type → data source Terraform model
-func xxxToDataSourceModel(ctx context.Context, obj *sdk.Xxx) (XxxDataSourceModel, diag.Diagnostics)
+// SDK type → base model (single source of truth for shared mapping)
+func xxxToBaseModel(ctx context.Context, obj *sdk.Xxx) (xxxModel, diag.Diagnostics)
+```
+
+`resource_xxx.go` — embeds the base model, wraps the base mapper:
+
+```go
+type XxxResourceModel struct {
+    xxxModel                  // embedded base model
+    Retry *RetryModel `tfsdk:"retry"`  // resource-only fields
+}
+
+// SDK type → resource model (wraps xxxToBaseModel)
+func xxxToResourceModel(ctx context.Context, obj *sdk.Xxx) (XxxResourceModel, diag.Diagnostics) {
+    common, diags := xxxToBaseModel(ctx, obj)
+    return XxxResourceModel{xxxModel: common}, diags
+}
 
 // Resource Terraform model → SDK type  (Create/Update only)
-func xxxFromModel(tenant string, data XxxModel) *sdk.Xxx
+func xxxFromModel(tenant string, data XxxResourceModel) *sdk.Xxx
+```
+
+`datasource_xxx.go` — embeds the base model, adds `state`:
+
+```go
+type XxxDataSourceModel struct {
+    xxxModel                       // embedded base model
+    State types.String `tfsdk:"state"`  // data-source-only field
+}
+
+// SDK type → data source model (wraps xxxToBaseModel)
+func xxxToDataSourceModel(ctx context.Context, obj *sdk.Xxx) (XxxDataSourceModel, diag.Diagnostics) {
+    common, diags := xxxToBaseModel(ctx, obj)
+    return XxxDataSourceModel{xxxModel: common}, diags
+}
 ```
 
 Rules for mapping functions:
+- The base model and `xxxToBaseModel` belong in `models.go` — never duplicate the shared mapping in the resource and data source files
+- `xxxToResourceModel` / `xxxToDataSourceModel` call `xxxToBaseModel` and only set the model's own extra fields — never re-map shared fields
+- A data source with **no** matching resource (no shared fields) has no base model; it maps directly in `xxxToDataSourceModel` (e.g. `regionToDataSourceModel`, `storageSkuToDataSourceModel`)
 - `xxxFromModel` receives `tenant string` as first argument (never read tenant from the model)
-- `xxxToResourceModel` and `xxxToDataSourceModel` return `diag.Diagnostics` even if currently empty — future-proofing
+- `xxxToBaseModel`, `xxxToResourceModel`, and `xxxToDataSourceModel` return `diag.Diagnostics` even if currently empty — future-proofing
 - Use shared helpers from `types.go` — do not re-implement `fromTime`, `fromRefPtr`, etc.
 - Data source models include `state` from `sdk.Status.State`; resource models do not (state is an API-side concept)
 

@@ -33,18 +33,7 @@ func (d *WorkspaceDataSource) Metadata(_ context.Context, req datasource.Metadat
 }
 
 type WorkspaceDataSourceModel struct {
-	Id               types.String `tfsdk:"id"`
-	Name             types.String `tfsdk:"name"`
-	Tenant           types.String `tfsdk:"tenant"`
-	Region           types.String `tfsdk:"region"`
-	ResourceProvider types.String `tfsdk:"resource_provider"`
-	CreatedAt        types.String `tfsdk:"created_at"`
-	DeletedAt        types.String `tfsdk:"deleted_at"`
-	LastModifiedAt   types.String `tfsdk:"last_modified_at"`
-
-	Labels      types.Map `tfsdk:"labels"`
-	Annotations types.Map `tfsdk:"annotations"`
-	Extensions  types.Map `tfsdk:"extensions"`
+	workspaceModel
 
 	State types.String `tfsdk:"state"`
 }
@@ -152,32 +141,8 @@ func (d *WorkspaceDataSource) Read(ctx context.Context, req datasource.ReadReque
 }
 
 func workspaceToDataSourceModel(ctx context.Context, workspace *sdk.Workspace) (WorkspaceDataSourceModel, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	model := WorkspaceDataSourceModel{}
-	model.Id = types.StringValue(workspace.Metadata.Ref)
-
-	model.Name = types.StringValue(workspace.Metadata.Name)
-	model.Tenant = types.StringValue(workspace.Metadata.Tenant)
-	model.Region = types.StringValue(workspace.Metadata.Region)
-	model.ResourceProvider = refToResourceProvider(workspace.Metadata.Ref)
-	model.CreatedAt = fromTime(workspace.Metadata.CreatedAt)
-	model.DeletedAt = fromTimePtr(workspace.Metadata.DeletedAt)
-	model.LastModifiedAt = fromTime(workspace.Metadata.LastModifiedAt)
-
-	labels, d := fromStringMap(ctx, workspace.Labels)
-	diags.Append(d...)
-	model.Labels = labels
-
-	annotations, d := fromStringMap(ctx, workspace.Annotations)
-	diags.Append(d...)
-	model.Annotations = annotations
-
-	extensions, d := fromStringMap(ctx, workspace.Extensions)
-	diags.Append(d...)
-	model.Extensions = extensions
-
+	common, diags := workspaceToBaseModel(ctx, workspace)
+	model := WorkspaceDataSourceModel{workspaceModel: common}
 	model.State = types.StringValue(string(workspace.Status.State))
-
 	return model, diags
 }

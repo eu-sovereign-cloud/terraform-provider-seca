@@ -33,23 +33,7 @@ func (d *BlockStorageDataSource) Metadata(_ context.Context, req datasource.Meta
 }
 
 type BlockStorageDataSourceModel struct {
-	Id               types.String `tfsdk:"id"`
-	Name             types.String `tfsdk:"name"`
-	WorkspaceId      types.String `tfsdk:"workspace_id"`
-	Tenant           types.String `tfsdk:"tenant"`
-	Region           types.String `tfsdk:"region"`
-	ResourceProvider types.String `tfsdk:"resource_provider"`
-	CreatedAt        types.String `tfsdk:"created_at"`
-	DeletedAt        types.String `tfsdk:"deleted_at"`
-	LastModifiedAt   types.String `tfsdk:"last_modified_at"`
-
-	Labels      types.Map `tfsdk:"labels"`
-	Annotations types.Map `tfsdk:"annotations"`
-	Extensions  types.Map `tfsdk:"extensions"`
-
-	SizeGB        types.Int64  `tfsdk:"size_gb"`
-	SkuId         types.String `tfsdk:"sku_id"`
-	SourceImageId types.String `tfsdk:"source_image_id"`
+	blockStorageModel
 
 	State types.String `tfsdk:"state"`
 }
@@ -171,37 +155,8 @@ func (d *BlockStorageDataSource) Read(ctx context.Context, req datasource.ReadRe
 }
 
 func blockStorageToDataSourceModel(ctx context.Context, block *sdk.BlockStorage) (BlockStorageDataSourceModel, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	model := BlockStorageDataSourceModel{}
-	model.Id = types.StringValue(block.Metadata.Ref)
-
-	model.Name = types.StringValue(block.Metadata.Name)
-	model.WorkspaceId = types.StringValue(block.Metadata.Workspace)
-	model.Tenant = types.StringValue(block.Metadata.Tenant)
-	model.Region = types.StringValue(block.Metadata.Region)
-	model.ResourceProvider = refToResourceProvider(block.Metadata.Ref)
-	model.CreatedAt = fromTime(block.Metadata.CreatedAt)
-	model.DeletedAt = fromTimePtr(block.Metadata.DeletedAt)
-	model.LastModifiedAt = fromTime(block.Metadata.LastModifiedAt)
-
-	labels, d := fromStringMap(ctx, block.Labels)
-	diags.Append(d...)
-	model.Labels = labels
-
-	annotations, d := fromStringMap(ctx, block.Annotations)
-	diags.Append(d...)
-	model.Annotations = annotations
-
-	extensions, d := fromStringMap(ctx, block.Extensions)
-	diags.Append(d...)
-	model.Extensions = extensions
-
-	model.SizeGB = types.Int64Value(int64(block.Spec.SizeGB))
-	model.SkuId = types.StringValue(block.Spec.SkuRef.Resource)
-	model.SourceImageId = fromRefPtr(block.Spec.SourceImageRef)
-
+	common, diags := blockStorageToBaseModel(ctx, block)
+	model := BlockStorageDataSourceModel{blockStorageModel: common}
 	model.State = types.StringValue(string(block.Status.State))
-
 	return model, diags
 }

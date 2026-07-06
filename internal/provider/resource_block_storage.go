@@ -55,24 +55,8 @@ func (r *BlockStorageResource) ImportState(ctx context.Context, req resource.Imp
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), name)...)
 }
 
-type BlockStorageModel struct {
-	Id               types.String `tfsdk:"id"`
-	Name             types.String `tfsdk:"name"`
-	WorkspaceId      types.String `tfsdk:"workspace_id"`
-	Tenant           types.String `tfsdk:"tenant"`
-	Region           types.String `tfsdk:"region"`
-	ResourceProvider types.String `tfsdk:"resource_provider"`
-	CreatedAt        types.String `tfsdk:"created_at"`
-	DeletedAt        types.String `tfsdk:"deleted_at"`
-	LastModifiedAt   types.String `tfsdk:"last_modified_at"`
-
-	Labels      types.Map `tfsdk:"labels"`
-	Annotations types.Map `tfsdk:"annotations"`
-	Extensions  types.Map `tfsdk:"extensions"`
-
-	SizeGB        types.Int64  `tfsdk:"size_gb"`
-	SkuId         types.String `tfsdk:"sku_id"`
-	SourceImageId types.String `tfsdk:"source_image_id"`
+type BlockStorageResourceModel struct {
+	blockStorageModel
 
 	Retry *RetryModel `tfsdk:"retry"`
 }
@@ -185,7 +169,7 @@ func (r *BlockStorageResource) Configure(ctx context.Context, req resource.Confi
 	tflog.Debug(ctx, "configured block storage resource")
 }
 
-func (r *BlockStorageResource) logFields(ctx context.Context, data BlockStorageModel) context.Context {
+func (r *BlockStorageResource) logFields(ctx context.Context, data BlockStorageResourceModel) context.Context {
 	ctx = tflog.SetField(ctx, "tenant_id", r.tenant)
 	ctx = tflog.SetField(ctx, "workspace_id", data.WorkspaceId.ValueString())
 	ctx = tflog.SetField(ctx, "name", data.Name.ValueString())
@@ -193,7 +177,7 @@ func (r *BlockStorageResource) logFields(ctx context.Context, data BlockStorageM
 }
 
 func (resource *BlockStorageResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data BlockStorageModel
+	var data BlockStorageResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -248,7 +232,7 @@ func (resource *BlockStorageResource) Create(ctx context.Context, req resource.C
 }
 
 func (resource *BlockStorageResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data BlockStorageModel
+	var data BlockStorageResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -288,7 +272,7 @@ func (resource *BlockStorageResource) Read(ctx context.Context, req resource.Rea
 }
 
 func (resource *BlockStorageResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data BlockStorageModel
+	var data BlockStorageResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -343,7 +327,7 @@ func (resource *BlockStorageResource) Update(ctx context.Context, req resource.U
 }
 
 func (resource *BlockStorageResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data BlockStorageModel
+	var data BlockStorageResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -395,7 +379,7 @@ func (resource *BlockStorageResource) Delete(ctx context.Context, req resource.D
 	tflog.Info(ctx, "block storage deleted")
 }
 
-func blockStorageFromModel(tenant string, data BlockStorageModel) *sdk.BlockStorage {
+func blockStorageFromModel(tenant string, data BlockStorageResourceModel) *sdk.BlockStorage {
 	block := &sdk.BlockStorage{
 		Metadata: &sdk.RegionalWorkspaceResourceMetadata{
 			Tenant:    tenant,
@@ -422,36 +406,7 @@ func blockStorageFromModel(tenant string, data BlockStorageModel) *sdk.BlockStor
 	return block
 }
 
-func blockStorageToResourceModel(ctx context.Context, block *sdk.BlockStorage) (BlockStorageModel, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	model := BlockStorageModel{}
-	model.Id = types.StringValue(block.Metadata.Ref)
-
-	model.Name = types.StringValue(block.Metadata.Name)
-	model.WorkspaceId = types.StringValue(block.Metadata.Workspace)
-	model.Tenant = types.StringValue(block.Metadata.Tenant)
-	model.Region = types.StringValue(block.Metadata.Region)
-	model.ResourceProvider = refToResourceProvider(block.Metadata.Ref)
-	model.CreatedAt = fromTime(block.Metadata.CreatedAt)
-	model.DeletedAt = fromTimePtr(block.Metadata.DeletedAt)
-	model.LastModifiedAt = fromTime(block.Metadata.LastModifiedAt)
-
-	labels, d := fromStringMap(ctx, block.Labels)
-	diags.Append(d...)
-	model.Labels = labels
-
-	annotations, d := fromStringMap(ctx, block.Annotations)
-	diags.Append(d...)
-	model.Annotations = annotations
-
-	extensions, d := fromStringMap(ctx, block.Extensions)
-	diags.Append(d...)
-	model.Extensions = extensions
-
-	model.SizeGB = types.Int64Value(int64(block.Spec.SizeGB))
-	model.SkuId = types.StringValue(block.Spec.SkuRef.Resource)
-	model.SourceImageId = fromRefPtr(block.Spec.SourceImageRef)
-
-	return model, diags
+func blockStorageToResourceModel(ctx context.Context, block *sdk.BlockStorage) (BlockStorageResourceModel, diag.Diagnostics) {
+	common, diags := blockStorageToBaseModel(ctx, block)
+	return BlockStorageResourceModel{blockStorageModel: common}, diags
 }
