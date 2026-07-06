@@ -10,14 +10,15 @@ import (
 )
 
 type blockStorageModel struct {
-	Id             types.String `tfsdk:"id"`
-	Name           types.String `tfsdk:"name"`
-	WorkspaceId    types.String `tfsdk:"workspace_id"`
-	Tenant         types.String `tfsdk:"tenant"`
-	Region         types.String `tfsdk:"region"`
-	CreatedAt      types.String `tfsdk:"created_at"`
-	DeletedAt      types.String `tfsdk:"deleted_at"`
-	LastModifiedAt types.String `tfsdk:"last_modified_at"`
+	Id               types.String `tfsdk:"id"`
+	Name             types.String `tfsdk:"name"`
+	WorkspaceId      types.String `tfsdk:"workspace_id"`
+	Tenant           types.String `tfsdk:"tenant"`
+	Region           types.String `tfsdk:"region"`
+	ResourceProvider types.String `tfsdk:"resource_provider"`
+	CreatedAt        types.String `tfsdk:"created_at"`
+	DeletedAt        types.String `tfsdk:"deleted_at"`
+	LastModifiedAt   types.String `tfsdk:"last_modified_at"`
 
 	Labels      types.Map `tfsdk:"labels"`
 	Annotations types.Map `tfsdk:"annotations"`
@@ -38,6 +39,7 @@ func blockStorageToBaseModel(ctx context.Context, block *sdk.BlockStorage) (bloc
 	model.WorkspaceId = types.StringValue(block.Metadata.Workspace)
 	model.Tenant = types.StringValue(block.Metadata.Tenant)
 	model.Region = types.StringValue(block.Metadata.Region)
+	model.ResourceProvider = refToResourceProvider(block.Metadata.Ref)
 	model.CreatedAt = fromTime(block.Metadata.CreatedAt)
 	model.DeletedAt = fromTimePtr(block.Metadata.DeletedAt)
 	model.LastModifiedAt = fromTime(block.Metadata.LastModifiedAt)
@@ -62,13 +64,14 @@ func blockStorageToBaseModel(ctx context.Context, block *sdk.BlockStorage) (bloc
 }
 
 type imageModel struct {
-	Id             types.String `tfsdk:"id"`
-	Name           types.String `tfsdk:"name"`
-	Tenant         types.String `tfsdk:"tenant"`
-	Region         types.String `tfsdk:"region"`
-	CreatedAt      types.String `tfsdk:"created_at"`
-	DeletedAt      types.String `tfsdk:"deleted_at"`
-	LastModifiedAt types.String `tfsdk:"last_modified_at"`
+	Id               types.String `tfsdk:"id"`
+	Name             types.String `tfsdk:"name"`
+	Tenant           types.String `tfsdk:"tenant"`
+	Region           types.String `tfsdk:"region"`
+	ResourceProvider types.String `tfsdk:"resource_provider"`
+	CreatedAt        types.String `tfsdk:"created_at"`
+	DeletedAt        types.String `tfsdk:"deleted_at"`
+	LastModifiedAt   types.String `tfsdk:"last_modified_at"`
 
 	Labels      types.Map `tfsdk:"labels"`
 	Annotations types.Map `tfsdk:"annotations"`
@@ -89,6 +92,7 @@ func imageToBaseModel(ctx context.Context, image *sdk.Image) (imageModel, diag.D
 	model.Name = types.StringValue(image.Metadata.Name)
 	model.Tenant = types.StringValue(image.Metadata.Tenant)
 	model.Region = types.StringValue(image.Metadata.Region)
+	model.ResourceProvider = refToResourceProvider(image.Metadata.Ref)
 	model.CreatedAt = fromTime(image.Metadata.CreatedAt)
 	model.DeletedAt = fromTimePtr(image.Metadata.DeletedAt)
 	model.LastModifiedAt = fromTime(image.Metadata.LastModifiedAt)
@@ -114,13 +118,14 @@ func imageToBaseModel(ctx context.Context, image *sdk.Image) (imageModel, diag.D
 }
 
 type workspaceModel struct {
-	Id             types.String `tfsdk:"id"`
-	Name           types.String `tfsdk:"name"`
-	Tenant         types.String `tfsdk:"tenant"`
-	Region         types.String `tfsdk:"region"`
-	CreatedAt      types.String `tfsdk:"created_at"`
-	DeletedAt      types.String `tfsdk:"deleted_at"`
-	LastModifiedAt types.String `tfsdk:"last_modified_at"`
+	Id               types.String `tfsdk:"id"`
+	Name             types.String `tfsdk:"name"`
+	Tenant           types.String `tfsdk:"tenant"`
+	Region           types.String `tfsdk:"region"`
+	ResourceProvider types.String `tfsdk:"resource_provider"`
+	CreatedAt        types.String `tfsdk:"created_at"`
+	DeletedAt        types.String `tfsdk:"deleted_at"`
+	LastModifiedAt   types.String `tfsdk:"last_modified_at"`
 
 	Labels      types.Map `tfsdk:"labels"`
 	Annotations types.Map `tfsdk:"annotations"`
@@ -136,6 +141,7 @@ func workspaceToBaseModel(ctx context.Context, workspace *sdk.Workspace) (worksp
 	model.Name = types.StringValue(workspace.Metadata.Name)
 	model.Tenant = types.StringValue(workspace.Metadata.Tenant)
 	model.Region = types.StringValue(workspace.Metadata.Region)
+	model.ResourceProvider = refToResourceProvider(workspace.Metadata.Ref)
 	model.CreatedAt = fromTime(workspace.Metadata.CreatedAt)
 	model.DeletedAt = fromTimePtr(workspace.Metadata.DeletedAt)
 	model.LastModifiedAt = fromTime(workspace.Metadata.LastModifiedAt)
