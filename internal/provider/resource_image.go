@@ -77,6 +77,12 @@ func (resource *ImageResource) Schema(_ context.Context, _ resource.SchemaReques
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"resource_provider": tfschema.StringAttribute{
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 			"created_at": tfschema.StringAttribute{
 				Computed: true,
 				PlanModifiers: []planmodifier.String{

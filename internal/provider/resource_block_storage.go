@@ -94,6 +94,12 @@ func (resource *BlockStorageResource) Schema(_ context.Context, _ resource.Schem
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"resource_provider": tfschema.StringAttribute{
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 			"created_at": tfschema.StringAttribute{
 				Computed: true,
 				PlanModifiers: []planmodifier.String{

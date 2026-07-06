@@ -77,6 +77,12 @@ func (resource *WorkspaceResource) Schema(_ context.Context, _ resource.SchemaRe
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"resource_provider": tfschema.StringAttribute{
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 			"created_at": tfschema.StringAttribute{
 				Computed: true,
 				PlanModifiers: []planmodifier.String{

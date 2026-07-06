@@ -56,6 +56,9 @@ func (d *BlockStorageDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 			"region": tfschema.StringAttribute{
 				Computed: true,
 			},
+			"resource_provider": tfschema.StringAttribute{
+				Computed: true,
+			},
 			"created_at": tfschema.StringAttribute{
 				Computed: true,
 			},
