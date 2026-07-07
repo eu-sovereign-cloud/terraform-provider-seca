@@ -105,5 +105,5 @@ The CI `generate` job will fail if `docs/` was not regenerated. **Do not skip th
 - [ ] `make generate` — run and commit the output (including any `docs/` changes)
 - [ ] `git diff --exit-code docs/` — must produce no output (clean)
 - [ ] `make build` — must succeed
-- [ ] `make test` — all tests pass
-- [ ] `make lint` — no linter errors
+- [ ] `make lint` — **run this before `make test`**; catches `unconvert`, `unused`, `staticcheck`, and `gofmt` issues that `go build` does not report
+- [ ] `make test` — all unit tests pass

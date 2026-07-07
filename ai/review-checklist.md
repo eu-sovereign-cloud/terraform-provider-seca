@@ -8,6 +8,7 @@ Check these before anything else. A PR failing any of these must not be merged.
 
 - [ ] CI `generate` job is green — `docs/` is in sync with `make generate` output
 - [ ] CI `build` job is green — provider compiles and lint passes
+- [ ] **`make lint` was run locally** before opening the PR and reported no issues — CI is the safety net, not the first check
 - [ ] All schema changes have corresponding `docs/` regeneration committed on the branch
 - [ ] `git diff --exit-code docs/` is clean (verify locally if CI is not available)
 
