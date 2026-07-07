@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -269,6 +270,162 @@ func internetGatewayToBaseModel(ctx context.Context, gtw *sdk.InternetGateway) (
 	model.Extensions = extensions
 
 	model.EgressOnly = types.BoolValue(gtw.Spec.EgressOnly)
+
+	return model, diags
+}
+
+var permissionAttrTypes = map[string]attr.Type{
+	"provider":  types.StringType,
+	"resources": types.ListType{ElemType: types.StringType},
+	"verb":      types.ListType{ElemType: types.StringType},
+}
+
+type permissionModel struct {
+	Provider  types.String `tfsdk:"provider"`
+	Resources types.List   `tfsdk:"resources"`
+	Verb      types.List   `tfsdk:"verb"`
+}
+
+type roleModel struct {
+	Id               types.String `tfsdk:"id"`
+	Name             types.String `tfsdk:"name"`
+	Tenant           types.String `tfsdk:"tenant"`
+	ResourceProvider types.String `tfsdk:"resource_provider"`
+	CreatedAt        types.String `tfsdk:"created_at"`
+	DeletedAt        types.String `tfsdk:"deleted_at"`
+	LastModifiedAt   types.String `tfsdk:"last_modified_at"`
+
+	Labels      types.Map `tfsdk:"labels"`
+	Annotations types.Map `tfsdk:"annotations"`
+	Extensions  types.Map `tfsdk:"extensions"`
+
+	Permissions types.List `tfsdk:"permissions"`
+}
+
+func roleToBaseModel(ctx context.Context, role *sdk.Role) (roleModel, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	model := roleModel{}
+	model.Id = types.StringValue(role.Metadata.Ref)
+	model.Name = types.StringValue(role.Metadata.Name)
+	model.Tenant = types.StringValue(role.Metadata.Tenant)
+	model.ResourceProvider = refToResourceProvider(role.Metadata.Ref)
+	model.CreatedAt = fromTime(role.Metadata.CreatedAt)
+	model.DeletedAt = fromTimePtr(role.Metadata.DeletedAt)
+	model.LastModifiedAt = fromTime(role.Metadata.LastModifiedAt)
+
+	labels, d := fromStringMap(ctx, role.Labels)
+	diags.Append(d...)
+	model.Labels = labels
+
+	annotations, d := fromStringMap(ctx, role.Annotations)
+	diags.Append(d...)
+	model.Annotations = annotations
+
+	extensions, d := fromStringMap(ctx, role.Extensions)
+	diags.Append(d...)
+	model.Extensions = extensions
+
+	perms := make([]permissionModel, 0, len(role.Spec.Permissions))
+	for _, p := range role.Spec.Permissions {
+		resources, d := types.ListValueFrom(ctx, types.StringType, p.Resources)
+		diags.Append(d...)
+		verb, d := types.ListValueFrom(ctx, types.StringType, p.Verb)
+		diags.Append(d...)
+		perms = append(perms, permissionModel{
+			Provider:  types.StringValue(p.Provider),
+			Resources: resources,
+			Verb:      verb,
+		})
+	}
+
+	permissions, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: permissionAttrTypes}, perms)
+	diags.Append(d...)
+	model.Permissions = permissions
+
+	return model, diags
+}
+
+var scopeAttrTypes = map[string]attr.Type{
+	"tenants":    types.ListType{ElemType: types.StringType},
+	"regions":    types.ListType{ElemType: types.StringType},
+	"workspaces": types.ListType{ElemType: types.StringType},
+}
+
+type scopeModel struct {
+	Tenants    types.List `tfsdk:"tenants"`
+	Regions    types.List `tfsdk:"regions"`
+	Workspaces types.List `tfsdk:"workspaces"`
+}
+
+type roleAssignmentModel struct {
+	Id               types.String `tfsdk:"id"`
+	Name             types.String `tfsdk:"name"`
+	Tenant           types.String `tfsdk:"tenant"`
+	ResourceProvider types.String `tfsdk:"resource_provider"`
+	CreatedAt        types.String `tfsdk:"created_at"`
+	DeletedAt        types.String `tfsdk:"deleted_at"`
+	LastModifiedAt   types.String `tfsdk:"last_modified_at"`
+
+	Labels      types.Map `tfsdk:"labels"`
+	Annotations types.Map `tfsdk:"annotations"`
+	Extensions  types.Map `tfsdk:"extensions"`
+
+	Subs   types.List `tfsdk:"subs"`
+	Scopes types.List `tfsdk:"scopes"`
+	Roles  types.List `tfsdk:"roles"`
+}
+
+func roleAssignmentToBaseModel(ctx context.Context, ra *sdk.RoleAssignment) (roleAssignmentModel, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	model := roleAssignmentModel{}
+	model.Id = types.StringValue(ra.Metadata.Ref)
+	model.Name = types.StringValue(ra.Metadata.Name)
+	model.Tenant = types.StringValue(ra.Metadata.Tenant)
+	model.ResourceProvider = refToResourceProvider(ra.Metadata.Ref)
+	model.CreatedAt = fromTime(ra.Metadata.CreatedAt)
+	model.DeletedAt = fromTimePtr(ra.Metadata.DeletedAt)
+	model.LastModifiedAt = fromTime(ra.Metadata.LastModifiedAt)
+
+	labels, d := fromStringMap(ctx, ra.Labels)
+	diags.Append(d...)
+	model.Labels = labels
+
+	annotations, d := fromStringMap(ctx, ra.Annotations)
+	diags.Append(d...)
+	model.Annotations = annotations
+
+	extensions, d := fromStringMap(ctx, ra.Extensions)
+	diags.Append(d...)
+	model.Extensions = extensions
+
+	subs, d := types.ListValueFrom(ctx, types.StringType, ra.Spec.Subs)
+	diags.Append(d...)
+	model.Subs = subs
+
+	scopes := make([]scopeModel, 0, len(ra.Spec.Scopes))
+	for _, s := range ra.Spec.Scopes {
+		tenants, d := types.ListValueFrom(ctx, types.StringType, s.Tenants)
+		diags.Append(d...)
+		regions, d := types.ListValueFrom(ctx, types.StringType, s.Regions)
+		diags.Append(d...)
+		workspaces, d := types.ListValueFrom(ctx, types.StringType, s.Workspaces)
+		diags.Append(d...)
+		scopes = append(scopes, scopeModel{
+			Tenants:    tenants,
+			Regions:    regions,
+			Workspaces: workspaces,
+		})
+	}
+
+	scopesList, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: scopeAttrTypes}, scopes)
+	diags.Append(d...)
+	model.Scopes = scopesList
+
+	roles, d := types.ListValueFrom(ctx, types.StringType, ra.Spec.Roles)
+	diags.Append(d...)
+	model.Roles = roles
 
 	return model, diags
 }
