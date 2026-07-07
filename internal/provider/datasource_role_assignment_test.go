@@ -27,9 +27,9 @@ func TestRoleAssignmentToDataSourceModel(t *testing.T) {
 		Annotations: sdk.Annotations{"owner": "platform"},
 		Extensions:  sdk.Extensions{"ext": "v3"},
 		Spec: sdk.RoleAssignmentSpec{
-			Subs:  []string{"user-a"},
+			Subs:   []string{"user-a"},
 			Scopes: []sdk.RoleAssignmentScope{{Tenants: []string{"tenant-1"}}},
-			Roles: []string{"viewer"},
+			Roles:  []string{"viewer"},
 		},
 		Status: &sdk.RoleAssignmentStatus{State: sdk.ResourceStateActive},
 	}
@@ -64,9 +64,9 @@ func TestRoleAssignmentToDataSourceModel_NilStatus(t *testing.T) {
 			LastModifiedAt: time.Now(),
 		},
 		Spec: sdk.RoleAssignmentSpec{
-			Subs:  []string{"user-b"},
+			Subs:   []string{"user-b"},
 			Scopes: []sdk.RoleAssignmentScope{{Regions: []string{"eu-1"}}},
-			Roles: []string{"editor"},
+			Roles:  []string{"editor"},
 		},
 		Status: nil,
 	}
