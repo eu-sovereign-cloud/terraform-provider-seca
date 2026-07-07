@@ -345,6 +345,7 @@ func roleToBaseModel(ctx context.Context, role *sdk.Role) (roleModel, diag.Diagn
 
 	return model, diags
 }
+
 //nolint:unused
 var scopeAttrTypes = map[string]attr.Type{
 	"tenants":    types.ListType{ElemType: types.StringType},
@@ -432,4 +433,3 @@ func roleAssignmentToBaseModel(ctx context.Context, ra *sdk.RoleAssignment) (rol
 
 	return model, diags
 }
-
