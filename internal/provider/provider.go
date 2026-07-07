@@ -142,6 +142,11 @@ func (p *SecaProvider) Resources(_ context.Context) []func() resource.Resource {
 		newBlockStorageResource,
 		newNetworkResource,
 		newInternetGatewayResource,
+		newRouteTableResource,
+		newSubnetResource,
+		newSecurityGroupResource,
+		newPublicIpResource,
+		newNicResource,
 	}
 }
 
@@ -155,5 +160,10 @@ func (p *SecaProvider) DataSources(_ context.Context) []func() datasource.DataSo
 		newNetworkSkuDataSource,
 		newNetworkDataSource,
 		newInternetGatewayDataSource,
+		newRouteTableDataSource,
+		newSubnetDataSource,
+		newSecurityGroupDataSource,
+		newPublicIpDataSource,
+		newNicDataSource,
 	}
 }
