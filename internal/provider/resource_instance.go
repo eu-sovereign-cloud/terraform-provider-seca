@@ -475,7 +475,7 @@ func instanceFromModel(ctx context.Context, tenant string, data InstanceResource
 	}
 
 	if !data.Zone.IsNull() && !data.Zone.IsUnknown() {
-		inst.Spec.Zone = sdk.Zone(data.Zone.ValueString())
+		inst.Spec.Zone = data.Zone.ValueString()
 	}
 
 	if !data.SecurityGroupId.IsNull() && !data.SecurityGroupId.IsUnknown() {
