@@ -345,3 +345,91 @@ func roleToBaseModel(ctx context.Context, role *sdk.Role) (roleModel, diag.Diagn
 
 	return model, diags
 }
+//nolint:unused
+var scopeAttrTypes = map[string]attr.Type{
+	"tenants":    types.ListType{ElemType: types.StringType},
+	"regions":    types.ListType{ElemType: types.StringType},
+	"workspaces": types.ListType{ElemType: types.StringType},
+}
+
+//nolint:unused
+type scopeModel struct {
+	Tenants    types.List `tfsdk:"tenants"`
+	Regions    types.List `tfsdk:"regions"`
+	Workspaces types.List `tfsdk:"workspaces"`
+}
+
+//nolint:unused
+type roleAssignmentModel struct {
+	Id               types.String `tfsdk:"id"`
+	Name             types.String `tfsdk:"name"`
+	Tenant           types.String `tfsdk:"tenant"`
+	ResourceProvider types.String `tfsdk:"resource_provider"`
+	CreatedAt        types.String `tfsdk:"created_at"`
+	DeletedAt        types.String `tfsdk:"deleted_at"`
+	LastModifiedAt   types.String `tfsdk:"last_modified_at"`
+
+	Labels      types.Map `tfsdk:"labels"`
+	Annotations types.Map `tfsdk:"annotations"`
+	Extensions  types.Map `tfsdk:"extensions"`
+
+	Subs   types.List `tfsdk:"subs"`
+	Scopes types.List `tfsdk:"scopes"`
+	Roles  types.List `tfsdk:"roles"`
+}
+
+//nolint:unused
+func roleAssignmentToBaseModel(ctx context.Context, ra *sdk.RoleAssignment) (roleAssignmentModel, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	model := roleAssignmentModel{}
+	model.Id = types.StringValue(ra.Metadata.Ref)
+	model.Name = types.StringValue(ra.Metadata.Name)
+	model.Tenant = types.StringValue(ra.Metadata.Tenant)
+	model.ResourceProvider = refToResourceProvider(ra.Metadata.Ref)
+	model.CreatedAt = fromTime(ra.Metadata.CreatedAt)
+	model.DeletedAt = fromTimePtr(ra.Metadata.DeletedAt)
+	model.LastModifiedAt = fromTime(ra.Metadata.LastModifiedAt)
+
+	labels, d := fromStringMap(ctx, ra.Labels)
+	diags.Append(d...)
+	model.Labels = labels
+
+	annotations, d := fromStringMap(ctx, ra.Annotations)
+	diags.Append(d...)
+	model.Annotations = annotations
+
+	extensions, d := fromStringMap(ctx, ra.Extensions)
+	diags.Append(d...)
+	model.Extensions = extensions
+
+	subs, d := types.ListValueFrom(ctx, types.StringType, ra.Spec.Subs)
+	diags.Append(d...)
+	model.Subs = subs
+
+	scopes := make([]scopeModel, 0, len(ra.Spec.Scopes))
+	for _, s := range ra.Spec.Scopes {
+		tenants, d := types.ListValueFrom(ctx, types.StringType, s.Tenants)
+		diags.Append(d...)
+		regions, d := types.ListValueFrom(ctx, types.StringType, s.Regions)
+		diags.Append(d...)
+		workspaces, d := types.ListValueFrom(ctx, types.StringType, s.Workspaces)
+		diags.Append(d...)
+		scopes = append(scopes, scopeModel{
+			Tenants:    tenants,
+			Regions:    regions,
+			Workspaces: workspaces,
+		})
+	}
+
+	scopesList, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: scopeAttrTypes}, scopes)
+	diags.Append(d...)
+	model.Scopes = scopesList
+
+	roles, d := types.ListValueFrom(ctx, types.StringType, ra.Spec.Roles)
+	diags.Append(d...)
+	model.Roles = roles
+
+	return model, diags
+}
+
