@@ -637,7 +637,7 @@ func instanceToBaseModel(ctx context.Context, inst *sdk.Instance) (instanceModel
 
 	model.SkuId = types.StringValue(inst.Spec.SkuRef.Resource)
 	model.PrimaryNicId = fromRefPtr(inst.Spec.PrimaryNicRef)
-	model.Zone = fromNonEmptyString(string(inst.Spec.Zone))
+	model.Zone = fromNonEmptyString(inst.Spec.Zone)
 	model.SecurityGroupId = fromRefPtr(inst.Spec.SecurityGroupRef)
 	model.UserData = fromNonEmptyString(inst.Spec.UserData)
 	model.AntiAffinityGroup = fromNonEmptyString(inst.Spec.AntiAffinityGroup)
