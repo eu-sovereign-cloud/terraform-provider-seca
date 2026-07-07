@@ -68,7 +68,9 @@ func (v stringEnumValidator) ValidateString(_ context.Context, req validator.Str
 }
 
 // StringEnumValidator returns a validator that checks the value is one of the allowed strings.
-func StringEnumValidator(allowed ...string) validator.String { return stringEnumValidator{allowed: allowed} }
+func StringEnumValidator(allowed ...string) validator.String {
+	return stringEnumValidator{allowed: allowed}
+}
 
 // portRangeValidator validates that an int64 is a valid port number (1-65535).
 type portRangeValidator struct{}
