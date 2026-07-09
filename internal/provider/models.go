@@ -225,6 +225,308 @@ func networkToBaseModel(ctx context.Context, net *sdk.Network) (networkModel, di
 	return model, diags
 }
 
+type securityGroupModel struct {
+	Id               types.String `tfsdk:"id"`
+	Name             types.String `tfsdk:"name"`
+	WorkspaceId      types.String `tfsdk:"workspace_id"`
+	Tenant           types.String `tfsdk:"tenant"`
+	Region           types.String `tfsdk:"region"`
+	ResourceProvider types.String `tfsdk:"resource_provider"`
+	CreatedAt        types.String `tfsdk:"created_at"`
+	DeletedAt        types.String `tfsdk:"deleted_at"`
+	LastModifiedAt   types.String `tfsdk:"last_modified_at"`
+
+	Labels      types.Map `tfsdk:"labels"`
+	Annotations types.Map `tfsdk:"annotations"`
+	Extensions  types.Map `tfsdk:"extensions"`
+
+	Rules    types.List `tfsdk:"rules"`
+	RuleRefs types.List `tfsdk:"rule_refs"`
+}
+
+func securityGroupToBaseModel(ctx context.Context, sg *sdk.SecurityGroup) (securityGroupModel, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	model := securityGroupModel{}
+	model.Id = types.StringValue(sg.Metadata.Ref)
+	model.Name = types.StringValue(sg.Metadata.Name)
+	model.WorkspaceId = types.StringValue(sg.Metadata.Workspace)
+	model.Tenant = types.StringValue(sg.Metadata.Tenant)
+	model.Region = types.StringValue(sg.Metadata.Region)
+	model.ResourceProvider = refToResourceProvider(sg.Metadata.Ref)
+	model.CreatedAt = fromTime(sg.Metadata.CreatedAt)
+	model.DeletedAt = fromTimePtr(sg.Metadata.DeletedAt)
+	model.LastModifiedAt = fromTime(sg.Metadata.LastModifiedAt)
+
+	labels, d := fromStringMap(ctx, sg.Labels)
+	diags.Append(d...)
+	model.Labels = labels
+
+	annotations, d := fromStringMap(ctx, sg.Annotations)
+	diags.Append(d...)
+	model.Annotations = annotations
+
+	extensions, d := fromStringMap(ctx, sg.Extensions)
+	diags.Append(d...)
+	model.Extensions = extensions
+
+	rules, d := sgRulesToListValue(ctx, sg.Spec.Rules)
+	diags.Append(d...)
+	model.Rules = rules
+
+	ruleRefs, d := sgRuleRefsToListValue(ctx, sg.Spec.RuleRefs)
+	diags.Append(d...)
+	model.RuleRefs = ruleRefs
+
+	return model, diags
+}
+
+type publicIpModel struct {
+	Id               types.String `tfsdk:"id"`
+	Name             types.String `tfsdk:"name"`
+	WorkspaceId      types.String `tfsdk:"workspace_id"`
+	Tenant           types.String `tfsdk:"tenant"`
+	Region           types.String `tfsdk:"region"`
+	ResourceProvider types.String `tfsdk:"resource_provider"`
+	CreatedAt        types.String `tfsdk:"created_at"`
+	DeletedAt        types.String `tfsdk:"deleted_at"`
+	LastModifiedAt   types.String `tfsdk:"last_modified_at"`
+
+	Labels      types.Map `tfsdk:"labels"`
+	Annotations types.Map `tfsdk:"annotations"`
+	Extensions  types.Map `tfsdk:"extensions"`
+
+	Version    types.String `tfsdk:"version"`
+	Address    types.String `tfsdk:"address"`
+	AttachedTo types.String `tfsdk:"attached_to"`
+	IpAddress  types.String `tfsdk:"ip_address"`
+}
+
+func publicIpToBaseModel(ctx context.Context, ip *sdk.PublicIp) (publicIpModel, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	model := publicIpModel{}
+	model.Id = types.StringValue(ip.Metadata.Ref)
+	model.Name = types.StringValue(ip.Metadata.Name)
+	model.WorkspaceId = types.StringValue(ip.Metadata.Workspace)
+	model.Tenant = types.StringValue(ip.Metadata.Tenant)
+	model.Region = types.StringValue(ip.Metadata.Region)
+	model.ResourceProvider = refToResourceProvider(ip.Metadata.Ref)
+	model.CreatedAt = fromTime(ip.Metadata.CreatedAt)
+	model.DeletedAt = fromTimePtr(ip.Metadata.DeletedAt)
+	model.LastModifiedAt = fromTime(ip.Metadata.LastModifiedAt)
+
+	labels, d := fromStringMap(ctx, ip.Labels)
+	diags.Append(d...)
+	model.Labels = labels
+
+	annotations, d := fromStringMap(ctx, ip.Annotations)
+	diags.Append(d...)
+	model.Annotations = annotations
+
+	extensions, d := fromStringMap(ctx, ip.Extensions)
+	diags.Append(d...)
+	model.Extensions = extensions
+
+	model.Version = types.StringValue(string(ip.Spec.Version))
+	if ip.Status != nil {
+		model.Address = types.StringValue(ip.Status.IpAddress)
+		model.IpAddress = types.StringValue(ip.Status.IpAddress)
+		model.AttachedTo = fromRefPtr(ip.Status.AttachedTo)
+	} else {
+		model.Address = types.StringNull()
+		model.IpAddress = types.StringNull()
+		model.AttachedTo = types.StringNull()
+	}
+
+	return model, diags
+}
+
+type nicModel struct {
+	Id               types.String `tfsdk:"id"`
+	Name             types.String `tfsdk:"name"`
+	WorkspaceId      types.String `tfsdk:"workspace_id"`
+	Tenant           types.String `tfsdk:"tenant"`
+	Region           types.String `tfsdk:"region"`
+	ResourceProvider types.String `tfsdk:"resource_provider"`
+	CreatedAt        types.String `tfsdk:"created_at"`
+	DeletedAt        types.String `tfsdk:"deleted_at"`
+	LastModifiedAt   types.String `tfsdk:"last_modified_at"`
+
+	Labels      types.Map `tfsdk:"labels"`
+	Annotations types.Map `tfsdk:"annotations"`
+	Extensions  types.Map `tfsdk:"extensions"`
+
+	SubnetId         types.String `tfsdk:"subnet_id"`
+	Addresses        types.List   `tfsdk:"addresses"`
+	PublicIpIds      types.List   `tfsdk:"public_ip_ids"`
+	SecurityGroupIds types.List   `tfsdk:"security_group_ids"`
+	MacAddress       types.String `tfsdk:"mac_address"`
+	SkuId            types.String `tfsdk:"sku_id"`
+}
+
+func nicToBaseModel(ctx context.Context, nic *sdk.Nic) (nicModel, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	model := nicModel{}
+	model.Id = types.StringValue(nic.Metadata.Ref)
+	model.Name = types.StringValue(nic.Metadata.Name)
+	model.WorkspaceId = types.StringValue(nic.Metadata.Workspace)
+	model.Tenant = types.StringValue(nic.Metadata.Tenant)
+	model.Region = types.StringValue(nic.Metadata.Region)
+	model.ResourceProvider = refToResourceProvider(nic.Metadata.Ref)
+	model.CreatedAt = fromTime(nic.Metadata.CreatedAt)
+	model.DeletedAt = fromTimePtr(nic.Metadata.DeletedAt)
+	model.LastModifiedAt = fromTime(nic.Metadata.LastModifiedAt)
+
+	labels, d := fromStringMap(ctx, nic.Labels)
+	diags.Append(d...)
+	model.Labels = labels
+
+	annotations, d := fromStringMap(ctx, nic.Annotations)
+	diags.Append(d...)
+	model.Annotations = annotations
+
+	extensions, d := fromStringMap(ctx, nic.Extensions)
+	diags.Append(d...)
+	model.Extensions = extensions
+
+	model.SubnetId = types.StringValue(nic.Spec.SubnetRef.Resource)
+
+	addresses, d := refsToStringList(nic.Spec.Addresses)
+	diags.Append(d...)
+	model.Addresses = addresses
+
+	model.SkuId = fromRefPtr(nic.Spec.SkuRef)
+
+	if nic.Status != nil {
+		publicIpIds, d := refsToStringListFromRefs(nic.Status.PublicIpRefs)
+		diags.Append(d...)
+		model.PublicIpIds = publicIpIds
+		model.MacAddress = types.StringValue(nic.Status.MacAddress)
+	} else {
+		model.PublicIpIds = types.ListValueMust(types.StringType, []attr.Value{})
+		model.MacAddress = types.StringNull()
+	}
+
+	model.SecurityGroupIds = types.ListValueMust(types.StringType, []attr.Value{})
+
+	return model, diags
+}
+
+type subnetModel struct {
+	Id               types.String `tfsdk:"id"`
+	Name             types.String `tfsdk:"name"`
+	WorkspaceId      types.String `tfsdk:"workspace_id"`
+	NetworkId        types.String `tfsdk:"network_id"`
+	Tenant           types.String `tfsdk:"tenant"`
+	Region           types.String `tfsdk:"region"`
+	ResourceProvider types.String `tfsdk:"resource_provider"`
+	CreatedAt        types.String `tfsdk:"created_at"`
+	DeletedAt        types.String `tfsdk:"deleted_at"`
+	LastModifiedAt   types.String `tfsdk:"last_modified_at"`
+
+	Labels      types.Map `tfsdk:"labels"`
+	Annotations types.Map `tfsdk:"annotations"`
+	Extensions  types.Map `tfsdk:"extensions"`
+
+	Cidr         SubnetCidrModel `tfsdk:"cidr"`
+	RouteTableId types.String    `tfsdk:"route_table_id"`
+	Zone         types.String    `tfsdk:"zone"`
+	SkuId        types.String    `tfsdk:"sku_id"`
+}
+
+func subnetToBaseModel(ctx context.Context, sub *sdk.Subnet) (subnetModel, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	model := subnetModel{}
+	model.Id = types.StringValue(sub.Metadata.Ref)
+	model.Name = types.StringValue(sub.Metadata.Name)
+	model.WorkspaceId = types.StringValue(sub.Metadata.Workspace)
+	model.NetworkId = types.StringValue(sub.Metadata.Network)
+	model.Tenant = types.StringValue(sub.Metadata.Tenant)
+	model.Region = types.StringValue(sub.Metadata.Region)
+	model.ResourceProvider = refToResourceProvider(sub.Metadata.Ref)
+	model.CreatedAt = fromTime(sub.Metadata.CreatedAt)
+	model.DeletedAt = fromTimePtr(sub.Metadata.DeletedAt)
+	model.LastModifiedAt = fromTime(sub.Metadata.LastModifiedAt)
+
+	labels, d := fromStringMap(ctx, sub.Labels)
+	diags.Append(d...)
+	model.Labels = labels
+
+	annotations, d := fromStringMap(ctx, sub.Annotations)
+	diags.Append(d...)
+	model.Annotations = annotations
+
+	extensions, d := fromStringMap(ctx, sub.Extensions)
+	diags.Append(d...)
+	model.Extensions = extensions
+
+	model.Cidr = SubnetCidrModel{
+		Ipv4: types.StringValue(sub.Spec.Cidr.Ipv4),
+		Ipv6: types.StringValue(sub.Spec.Cidr.Ipv6),
+	}
+	model.RouteTableId = types.StringValue(sub.Spec.RouteTableRef.Resource)
+	model.Zone = types.StringValue(sub.Spec.Zone)
+	model.SkuId = fromRefPtr(sub.Spec.SkuRef)
+
+	return model, diags
+}
+
+type routeTableModel struct {
+	Id               types.String `tfsdk:"id"`
+	Name             types.String `tfsdk:"name"`
+	WorkspaceId      types.String `tfsdk:"workspace_id"`
+	NetworkId        types.String `tfsdk:"network_id"`
+	Tenant           types.String `tfsdk:"tenant"`
+	Region           types.String `tfsdk:"region"`
+	ResourceProvider types.String `tfsdk:"resource_provider"`
+	CreatedAt        types.String `tfsdk:"created_at"`
+	DeletedAt        types.String `tfsdk:"deleted_at"`
+	LastModifiedAt   types.String `tfsdk:"last_modified_at"`
+
+	Labels      types.Map `tfsdk:"labels"`
+	Annotations types.Map `tfsdk:"annotations"`
+	Extensions  types.Map `tfsdk:"extensions"`
+
+	Routes types.List `tfsdk:"routes"`
+}
+
+func routeTableToBaseModel(ctx context.Context, rt *sdk.RouteTable) (routeTableModel, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	model := routeTableModel{}
+	model.Id = types.StringValue(rt.Metadata.Ref)
+	model.Name = types.StringValue(rt.Metadata.Name)
+	model.WorkspaceId = types.StringValue(rt.Metadata.Workspace)
+	model.NetworkId = types.StringValue(rt.Metadata.Network)
+	model.Tenant = types.StringValue(rt.Metadata.Tenant)
+	model.Region = types.StringValue(rt.Metadata.Region)
+	model.ResourceProvider = refToResourceProvider(rt.Metadata.Ref)
+	model.CreatedAt = fromTime(rt.Metadata.CreatedAt)
+	model.DeletedAt = fromTimePtr(rt.Metadata.DeletedAt)
+	model.LastModifiedAt = fromTime(rt.Metadata.LastModifiedAt)
+
+	labels, d := fromStringMap(ctx, rt.Labels)
+	diags.Append(d...)
+	model.Labels = labels
+
+	annotations, d := fromStringMap(ctx, rt.Annotations)
+	diags.Append(d...)
+	model.Annotations = annotations
+
+	extensions, d := fromStringMap(ctx, rt.Extensions)
+	diags.Append(d...)
+	model.Extensions = extensions
+
+	routes, d := routesToListValue(ctx, rt.Spec.Routes)
+	diags.Append(d...)
+	model.Routes = routes
+
+	return model, diags
+}
+
 type internetGatewayModel struct {
 	Id               types.String `tfsdk:"id"`
 	Name             types.String `tfsdk:"name"`
@@ -346,18 +648,21 @@ func roleToBaseModel(ctx context.Context, role *sdk.Role) (roleModel, diag.Diagn
 	return model, diags
 }
 
+//nolint:unused
 var scopeAttrTypes = map[string]attr.Type{
 	"tenants":    types.ListType{ElemType: types.StringType},
 	"regions":    types.ListType{ElemType: types.StringType},
 	"workspaces": types.ListType{ElemType: types.StringType},
 }
 
+//nolint:unused
 type scopeModel struct {
 	Tenants    types.List `tfsdk:"tenants"`
 	Regions    types.List `tfsdk:"regions"`
 	Workspaces types.List `tfsdk:"workspaces"`
 }
 
+//nolint:unused
 type roleAssignmentModel struct {
 	Id               types.String `tfsdk:"id"`
 	Name             types.String `tfsdk:"name"`
@@ -376,6 +681,7 @@ type roleAssignmentModel struct {
 	Roles  types.List `tfsdk:"roles"`
 }
 
+//nolint:unused
 func roleAssignmentToBaseModel(ctx context.Context, ra *sdk.RoleAssignment) (roleAssignmentModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
