@@ -80,11 +80,12 @@ func (r *NetworkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 		"ipv4": tfschema.StringAttribute{
 			Optional:   true,
 			Computed:   true,
-			Validators: []validator.String{CIDRValidator()},
+			Validators: []validator.String{CIDRv4Validator()},
 		},
 		"ipv6": tfschema.StringAttribute{
-			Optional: true,
-			Computed: true,
+			Optional:   true,
+			Computed:   true,
+			Validators: []validator.String{CIDRv6Validator()},
 		},
 	}
 

@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 )
 
-// cidrValidator validates that a string is a valid CIDR block.
 type cidrValidator struct{}
 
 func (v cidrValidator) Description(_ context.Context) string {
@@ -34,10 +33,60 @@ func (v cidrValidator) ValidateString(_ context.Context, req validator.StringReq
 	}
 }
 
-// CIDRValidator returns a validator that checks the value is a valid CIDR block.
 func CIDRValidator() validator.String { return cidrValidator{} }
 
-// stringEnumValidator validates that a string is one of the allowed values.
+type cidrV4Validator struct{}
+
+func (v cidrV4Validator) Description(_ context.Context) string {
+	return "value must be a valid IPv4 CIDR block (e.g. 10.0.0.0/16)"
+}
+
+func (v cidrV4Validator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v cidrV4Validator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+	ip, _, err := net.ParseCIDR(req.ConfigValue.ValueString())
+	if err != nil || ip.To4() == nil {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Invalid IPv4 CIDR block",
+			fmt.Sprintf("Expected a valid IPv4 CIDR block (e.g. \"10.0.0.0/16\"), got: %q", req.ConfigValue.ValueString()),
+		)
+	}
+}
+
+func CIDRv4Validator() validator.String { return cidrV4Validator{} }
+
+type cidrV6Validator struct{}
+
+func (v cidrV6Validator) Description(_ context.Context) string {
+	return "value must be a valid IPv6 CIDR block (e.g. 2001:db8::/32)"
+}
+
+func (v cidrV6Validator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v cidrV6Validator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+	ip, _, err := net.ParseCIDR(req.ConfigValue.ValueString())
+	if err != nil || ip.To4() != nil {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Invalid IPv6 CIDR block",
+			fmt.Sprintf("Expected a valid IPv6 CIDR block (e.g. \"2001:db8::/32\"), got: %q", req.ConfigValue.ValueString()),
+		)
+	}
+}
+
+func CIDRv6Validator() validator.String { return cidrV6Validator{} }
+
 type stringEnumValidator struct {
 	allowed []string
 }
@@ -67,12 +116,10 @@ func (v stringEnumValidator) ValidateString(_ context.Context, req validator.Str
 	)
 }
 
-// StringEnumValidator returns a validator that checks the value is one of the allowed strings.
 func StringEnumValidator(allowed ...string) validator.String {
 	return stringEnumValidator{allowed: allowed}
 }
 
-// portRangeValidator validates that an int64 is a valid port number (1-65535).
 type portRangeValidator struct{}
 
 func (v portRangeValidator) Description(_ context.Context) string {
@@ -97,5 +144,4 @@ func (v portRangeValidator) ValidateInt64(_ context.Context, req validator.Int64
 	}
 }
 
-// PortRangeValidator returns a validator that checks the value is a valid port (1-65535).
 func PortRangeValidator() validator.Int64 { return portRangeValidator{} }

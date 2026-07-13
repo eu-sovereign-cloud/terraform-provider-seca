@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
@@ -91,8 +92,14 @@ type SecurityGroupResourceModel struct {
 
 func (r *SecurityGroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	portsAttrs := map[string]tfschema.Attribute{
-		"from": tfschema.Int64Attribute{Optional: true},
-		"to":   tfschema.Int64Attribute{Optional: true},
+		"from": tfschema.Int64Attribute{
+			Optional:   true,
+			Validators: []validator.Int64{PortRangeValidator()},
+		},
+		"to": tfschema.Int64Attribute{
+			Optional:   true,
+			Validators: []validator.Int64{PortRangeValidator()},
+		},
 		"list": tfschema.ListAttribute{
 			ElementType: types.Int64Type,
 			Optional:    true,
@@ -100,8 +107,14 @@ func (r *SecurityGroupResource) Schema(_ context.Context, _ resource.SchemaReque
 	}
 
 	ruleAttrs := map[string]tfschema.Attribute{
-		"direction": tfschema.StringAttribute{Required: true},
-		"protocol":  tfschema.StringAttribute{Required: true},
+		"direction": tfschema.StringAttribute{
+			Required:   true,
+			Validators: []validator.String{StringEnumValidator("ingress", "egress")},
+		},
+		"protocol": tfschema.StringAttribute{
+			Required:   true,
+			Validators: []validator.String{StringEnumValidator("tcp", "udp", "tcp+udp", "icmp")},
+		},
 		"ports": tfschema.SingleNestedAttribute{
 			Optional:   true,
 			Attributes: portsAttrs,
