@@ -115,7 +115,10 @@ func TestAccRoleAssignment(t *testing.T) {
 					resource.TestCheckResourceAttr("seca_role_assignment.test", "subs.#", "1"),
 					resource.TestCheckResourceAttr("seca_role_assignment.test", "subs.0", "user-test-1"),
 					resource.TestCheckResourceAttr("seca_role_assignment.test", "scopes.#", "1"),
+					resource.TestCheckResourceAttr("seca_role_assignment.test", "scopes.0.tenants.#", "1"),
+					resource.TestCheckResourceAttr("seca_role_assignment.test", "scopes.0.tenants.0", testAccTenant),
 					resource.TestCheckResourceAttr("seca_role_assignment.test", "roles.#", "1"),
+					resource.TestCheckResourceAttr("seca_role_assignment.test", "roles.0", "role-for-assignment-test"),
 				),
 			},
 			{
@@ -123,6 +126,7 @@ func TestAccRoleAssignment(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("seca_role_assignment.test", "name", "role-assignment-acctest-1"),
 					resource.TestCheckResourceAttr("seca_role_assignment.test", "subs.#", "2"),
+					resource.TestCheckResourceAttr("seca_role_assignment.test", "subs.1", "user-test-2"),
 				),
 			},
 			{
@@ -141,7 +145,9 @@ func TestAccRoleAssignment(t *testing.T) {
 					resource.TestCheckResourceAttr("data.seca_role_assignment.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("data.seca_role_assignment.test", "state", "active"),
 					resource.TestCheckResourceAttr("data.seca_role_assignment.test", "subs.#", "1"),
+					resource.TestCheckResourceAttr("data.seca_role_assignment.test", "subs.0", "user-test-1"),
 					resource.TestCheckResourceAttr("data.seca_role_assignment.test", "roles.#", "1"),
+					resource.TestCheckResourceAttr("data.seca_role_assignment.test", "roles.0", "role-for-assignment-test"),
 				),
 			},
 		},
