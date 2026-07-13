@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -14,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	sdk "github.com/eu-sovereign-cloud/go-sdk/pkg/spec/schema"
@@ -60,11 +62,15 @@ func (r *NicResource) ImportState(ctx context.Context, req resource.ImportStateR
 type NicResourceModel struct {
 	nicModel
 
-	Retry *RetryModel `tfsdk:"retry"`
+	Retry    *RetryModel    `tfsdk:"retry"`
+	Timeouts timeouts.Value `tfsdk:"timeouts"`
 }
 
-func (r *NicResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *NicResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = tfschema.Schema{
+		Blocks: map[string]tfschema.Block{
+			"timeouts": timeouts.BlockAll(ctx),
+		},
 		Attributes: map[string]tfschema.Attribute{
 			"id": tfschema.StringAttribute{
 				Computed: true,
@@ -213,6 +219,12 @@ func (r *NicResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
+	createTimeout, diags := data.Timeouts.Create(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "creating nic")
 
@@ -239,7 +251,7 @@ func (r *NicResource) Create(ctx context.Context, req resource.CreateRequest, re
 		Name:      nic.Metadata.Name,
 	}
 
-	nic, err = r.client.NetworkV1.GetNicUntilState(ctx, wref, r.retry.with(data.Retry).untilState(sdk.ResourceStateActive))
+	nic, err = r.client.NetworkV1.GetNicUntilState(ctx, wref, r.retry.with(data.Retry).withTimeout(createTimeout).untilState(sdk.ResourceStateActive))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading nic",
@@ -248,11 +260,12 @@ func (r *NicResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	result, diags := nicToResourceModel(ctx, nic)
-	resp.Diagnostics.Append(diags...)
+	result, diags2 := nicToResourceModel(ctx, nic)
+	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "nic created")
 
@@ -304,6 +317,12 @@ func (r *NicResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		return
 	}
 
+	updateTimeout, diags := data.Timeouts.Update(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "updating nic")
 
@@ -330,7 +349,7 @@ func (r *NicResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		Name:      nic.Metadata.Name,
 	}
 
-	nic, err = r.client.NetworkV1.GetNicUntilState(ctx, wref, r.retry.with(data.Retry).untilState(sdk.ResourceStateActive))
+	nic, err = r.client.NetworkV1.GetNicUntilState(ctx, wref, r.retry.with(data.Retry).withTimeout(updateTimeout).untilState(sdk.ResourceStateActive))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading nic",
@@ -339,11 +358,12 @@ func (r *NicResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		return
 	}
 
-	result, diags := nicToResourceModel(ctx, nic)
-	resp.Diagnostics.Append(diags...)
+	result, diags2 := nicToResourceModel(ctx, nic)
+	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "nic updated")
 
@@ -353,6 +373,12 @@ func (r *NicResource) Update(ctx context.Context, req resource.UpdateRequest, re
 func (r *NicResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var data NicResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	deleteTimeout, diags := data.Timeouts.Delete(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -385,7 +411,7 @@ func (r *NicResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 		Name:      nic.Metadata.Name,
 	}
 
-	err = r.client.NetworkV1.WatchNicUntilDeleted(ctx, wref, r.retry.with(data.Retry).observer())
+	err = r.client.NetworkV1.WatchNicUntilDeleted(ctx, wref, r.retry.with(data.Retry).withTimeout(deleteTimeout).observer())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading nic",

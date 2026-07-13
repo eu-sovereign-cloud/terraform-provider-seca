@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -14,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	sdk "github.com/eu-sovereign-cloud/go-sdk/pkg/spec/schema"
@@ -71,11 +73,15 @@ type RouteModel struct {
 type RouteTableResourceModel struct {
 	routeTableModel
 
-	Retry *RetryModel `tfsdk:"retry"`
+	Retry    *RetryModel    `tfsdk:"retry"`
+	Timeouts timeouts.Value `tfsdk:"timeouts"`
 }
 
-func (r *RouteTableResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *RouteTableResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = tfschema.Schema{
+		Blocks: map[string]tfschema.Block{
+			"timeouts": timeouts.BlockAll(ctx),
+		},
 		Attributes: map[string]tfschema.Attribute{
 			"id": tfschema.StringAttribute{
 				Computed: true,
@@ -204,6 +210,12 @@ func (r *RouteTableResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
+	createTimeout, diags := data.Timeouts.Create(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "creating route table")
 
@@ -231,7 +243,7 @@ func (r *RouteTableResource) Create(ctx context.Context, req resource.CreateRequ
 		Name:      rt.Metadata.Name,
 	}
 
-	rt, err = r.client.NetworkV1.GetRouteTableUntilState(ctx, nref, r.retry.with(data.Retry).untilState(sdk.ResourceStateActive))
+	rt, err = r.client.NetworkV1.GetRouteTableUntilState(ctx, nref, r.retry.with(data.Retry).withTimeout(createTimeout).untilState(sdk.ResourceStateActive))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading route table",
@@ -240,11 +252,12 @@ func (r *RouteTableResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	result, diags := routeTableToResourceModel(ctx, rt)
-	resp.Diagnostics.Append(diags...)
+	result, diags2 := routeTableToResourceModel(ctx, rt)
+	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "route table created")
 
@@ -297,6 +310,12 @@ func (r *RouteTableResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
+	updateTimeout, diags := data.Timeouts.Update(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "updating route table")
 
@@ -324,7 +343,7 @@ func (r *RouteTableResource) Update(ctx context.Context, req resource.UpdateRequ
 		Name:      rt.Metadata.Name,
 	}
 
-	rt, err = r.client.NetworkV1.GetRouteTableUntilState(ctx, nref, r.retry.with(data.Retry).untilState(sdk.ResourceStateActive))
+	rt, err = r.client.NetworkV1.GetRouteTableUntilState(ctx, nref, r.retry.with(data.Retry).withTimeout(updateTimeout).untilState(sdk.ResourceStateActive))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading route table",
@@ -333,11 +352,12 @@ func (r *RouteTableResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
-	result, diags := routeTableToResourceModel(ctx, rt)
-	resp.Diagnostics.Append(diags...)
+	result, diags2 := routeTableToResourceModel(ctx, rt)
+	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "route table updated")
 
@@ -347,6 +367,12 @@ func (r *RouteTableResource) Update(ctx context.Context, req resource.UpdateRequ
 func (r *RouteTableResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var data RouteTableResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	deleteTimeout, diags := data.Timeouts.Delete(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -381,7 +407,7 @@ func (r *RouteTableResource) Delete(ctx context.Context, req resource.DeleteRequ
 		Name:      rt.Metadata.Name,
 	}
 
-	err = r.client.NetworkV1.WatchRouteTableUntilDeleted(ctx, nref, r.retry.with(data.Retry).observer())
+	err = r.client.NetworkV1.WatchRouteTableUntilDeleted(ctx, nref, r.retry.with(data.Retry).withTimeout(deleteTimeout).observer())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading route table",

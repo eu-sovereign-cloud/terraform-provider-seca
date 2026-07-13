@@ -22,12 +22,20 @@ ref := secapi.TenantReference{          // or WorkspaceReference for workspace-s
     Name:   result.Metadata.Name,
 }
 
-// Step 3: Configure polling
-// resource.retry holds the provider-level values; .with(data.Retry) overlays
-// any per-resource `retry` block; .untilState builds the observer config.
-config := resource.retry.with(data.Retry).untilState(sdk.ResourceStateActive)
+// Step 3: Read per-resource timeout (returns default if user didn't set it)
+createTimeout, diags := plan.Timeouts.Create(ctx, 10*time.Minute)
+resp.Diagnostics.Append(diags...)
+if resp.Diagnostics.HasError() {
+    return
+}
 
-// Step 4: Poll until active (or fail)
+// Step 4: Configure polling
+// resource.retry holds the provider-level values; .with(plan.Retry) overlays
+// any per-resource `retry` block; .withTimeout derives MaxAttempts from the
+// timeout / interval; .untilState builds the observer config.
+config := resource.retry.with(plan.Retry).withTimeout(createTimeout).untilState(sdk.ResourceStateActive)
+
+// Step 5: Poll until active (or fail)
 result, err = resource.client.StorageV1.GetXxxUntilState(ctx, ref, config)
 if err != nil {
     resp.Diagnostics.AddError("Error reading Xxx", "...\nError: "+err.Error())
@@ -35,7 +43,46 @@ if err != nil {
 }
 ```
 
-**The result from Step 4 (not Step 1) must be used to populate Terraform state.** The state must reflect the fully provisioned resource, not the intermediate response from the create call.
+**The result from Step 5 (not Step 1) must be used to populate Terraform state.** The state must reflect the fully provisioned resource, not the intermediate response from the create call.
+
+After writing state, always restore the user-supplied `Timeouts` value so it is persisted:
+```go
+state.Timeouts = plan.Timeouts
+resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+```
+
+## Timeouts
+
+Every resource exposes a standard `timeouts` block that lets users set a ceiling on how long each operation may run:
+
+```hcl
+resource "seca_workspace" "example" {
+  name = "my-workspace"
+
+  timeouts {
+    create = "20m"
+    update = "20m"
+    delete = "15m"
+  }
+}
+```
+
+Internally, `withTimeout(d)` on `retryConfig` derives `MaxAttempts = ceil(d / interval)`. If no timeout is specified, the per-resource default is used (declared in the `Create`/`Update`/`Delete` call sites). See the table below for defaults.
+
+| Resource | Create / Update | Delete |
+|---|---|---|
+| `seca_workspace` | 10 m | 10 m |
+| `seca_image` | 15 m | 15 m |
+| `seca_block_storage` | 10 m | 10 m |
+| `seca_network` | 5 m | 5 m |
+| `seca_internet_gateway` | 5 m | 5 m |
+| `seca_route_table` | 5 m | 5 m |
+| `seca_subnet` | 5 m | 5 m |
+| `seca_security_group` | 5 m | 5 m |
+| `seca_public_ip` | 5 m | 5 m |
+| `seca_nic` | 5 m | 5 m |
+| `seca_role` | 5 m | 5 m |
+| `seca_instance` | 20 m | 20 m |
 
 ## Retry Configuration
 
@@ -53,7 +100,7 @@ Retry parameters resolve through three layers, each overriding the previous **pe
 
 `Delay` is the initial wait before the first poll (allows the API time to begin provisioning). `Interval` is the wait between subsequent polls.
 
-Each resource stores the resolved provider-level values in `resource.retry` (a `retryConfig`, set in `Configure()`). The optional per-resource block lives on the model as `Retry *SecaRetryModel` and is declared in the schema with the shared `retryResourceSchema()` helper. In Create/Update/Delete, `resource.retry.with(data.Retry)` overlays the per-resource block on top of the inherited values before building the observer config (`.untilState(...)` for Create/Update, `.observer()` for Delete). All of this lives in `retry.go`.
+Each resource stores the resolved provider-level values in `resource.retry` (a `retryConfig`, set in `Configure()`). The optional per-resource block lives on the model as `Retry *RetryModel` and is declared in the schema with the shared `retryResourceSchema()` helper. In Create/Update/Delete, `resource.retry.with(plan.Retry).withTimeout(timeout)` overlays the per-resource block and timeout-derived MaxAttempts on top of the inherited values before building the observer config (`.untilState(...)` for Create/Update, `.observer()` for Delete). All of this lives in `retry.go`.
 
 ```hcl
 provider "seca" {
@@ -84,12 +131,13 @@ Always use the **result from the initial API call** to populate the reference (e
 
 ## Delete Operations
 
-`Delete()` submits the deletion with `DeleteXxx()`, then polls `WatchXxxUntilDeleted(ctx, ref, config)` — using the same reference and the same resolved retry config (`resource.retry.with(data.Retry).observer()`) as the Create/Update polling — before returning. This ensures the resource is fully gone on the API side, so a subsequent create of a same-named resource does not conflict. On a polling error, surface it with the read verb: `resp.Diagnostics.AddError("Error reading Xxx", "...while waiting for the Xxx to become deleted.\nError: "+err.Error())`.
+`Delete()` submits the deletion with `DeleteXxx()`, then polls `WatchXxxUntilDeleted(ctx, ref, config)` — using the same reference and the same resolved retry config (`resource.retry.with(data.Retry).withTimeout(deleteTimeout).observer()`) as the Create/Update polling — before returning. This ensures the resource is fully gone on the API side, so a subsequent create of a same-named resource does not conflict. On a polling error, surface it with the read verb: `resp.Diagnostics.AddError("Error reading Xxx", "...while waiting for the Xxx to become deleted.\nError: "+err.Error())`.
 
 ## What NOT to Do
 
 - Never write state from the Step 1 result. Always use the Step 4 (poll) result.
 - Never skip the polling step for Create or Update, even for "fast" resources.
 - Never use `time.Sleep` directly. Always use `GetXxxUntilState()`.
-- Never hard-code delay/interval values. Always resolve through `resource.retry.with(data.Retry)`.
+- Never hard-code delay/interval values. Always resolve through `resource.retry.with(plan.Retry).withTimeout(timeout)`.
 - Never ignore the error from `GetXxxUntilState()`.
+- Never forget to set `state.Timeouts = plan.Timeouts` before writing state in Create/Update.

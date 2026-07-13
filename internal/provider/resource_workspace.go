@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -11,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	sdk "github.com/eu-sovereign-cloud/go-sdk/pkg/spec/schema"
@@ -47,11 +49,15 @@ func (r *WorkspaceResource) ImportState(ctx context.Context, req resource.Import
 type WorkspaceResourceModel struct {
 	workspaceModel
 
-	Retry *RetryModel `tfsdk:"retry"`
+	Retry    *RetryModel    `tfsdk:"retry"`
+	Timeouts timeouts.Value `tfsdk:"timeouts"`
 }
 
-func (resource *WorkspaceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (resource *WorkspaceResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = tfschema.Schema{
+		Blocks: map[string]tfschema.Block{
+			"timeouts": timeouts.BlockAll(ctx),
+		},
 		Attributes: map[string]tfschema.Attribute{
 			"id": tfschema.StringAttribute{
 				Computed: true,
@@ -150,25 +156,29 @@ func (r *WorkspaceResource) logFields(ctx context.Context, data WorkspaceResourc
 }
 
 func (resource *WorkspaceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data WorkspaceResourceModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	var plan WorkspaceResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	ctx = resource.logFields(ctx, data)
-	tflog.Debug(ctx, "creating workspace")
+	createTimeout, diags := plan.Timeouts.Create(ctx, 10*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-	// Create the workspace
+	ctx = resource.logFields(ctx, plan)
+	tflog.Debug(ctx, "creating workspace")
 
 	workspace := &sdk.Workspace{
 		Metadata: &sdk.RegionalResourceMetadata{
 			Tenant: resource.tenant,
-			Name:   data.Name.ValueString(),
+			Name:   plan.Name.ValueString(),
 		},
-		Labels:      toStringMap(data.Labels),
-		Annotations: toStringMap(data.Annotations),
-		Extensions:  toStringMap(data.Extensions),
+		Labels:      toStringMap(plan.Labels),
+		Annotations: toStringMap(plan.Annotations),
+		Extensions:  toStringMap(plan.Extensions),
 	}
 
 	workspace, err := resource.client.WorkspaceV1.CreateOrUpdateWorkspace(ctx, workspace)
@@ -182,14 +192,12 @@ func (resource *WorkspaceResource) Create(ctx context.Context, req resource.Crea
 
 	tflog.Debug(ctx, "waiting for workspace to become active")
 
-	// Wait until it is active
-
 	tref := secapi.TenantReference{
 		Tenant: secapi.TenantID(workspace.Metadata.Tenant),
 		Name:   workspace.Metadata.Name,
 	}
 
-	config := resource.retry.with(data.Retry).untilState(sdk.ResourceStateActive)
+	config := resource.retry.with(plan.Retry).withTimeout(createTimeout).untilState(sdk.ResourceStateActive)
 
 	workspace, err = resource.client.WorkspaceV1.GetWorkspaceUntilState(ctx, tref, config)
 	if err != nil {
@@ -200,15 +208,16 @@ func (resource *WorkspaceResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	data, diags := workspaceToResourceModel(ctx, workspace)
-	resp.Diagnostics.Append(diags...)
+	state, diags2 := workspaceToResourceModel(ctx, workspace)
+	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	state.Timeouts = plan.Timeouts
 
 	tflog.Info(ctx, "workspace created")
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
 func (resource *WorkspaceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -251,25 +260,29 @@ func (resource *WorkspaceResource) Read(ctx context.Context, req resource.ReadRe
 }
 
 func (resource *WorkspaceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data WorkspaceResourceModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	var plan WorkspaceResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	ctx = resource.logFields(ctx, data)
-	tflog.Debug(ctx, "updating workspace")
+	updateTimeout, diags := plan.Timeouts.Update(ctx, 10*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-	// Update the workspace
+	ctx = resource.logFields(ctx, plan)
+	tflog.Debug(ctx, "updating workspace")
 
 	workspace := &sdk.Workspace{
 		Metadata: &sdk.RegionalResourceMetadata{
 			Tenant: resource.tenant,
-			Name:   data.Name.ValueString(),
+			Name:   plan.Name.ValueString(),
 		},
-		Labels:      toStringMap(data.Labels),
-		Annotations: toStringMap(data.Annotations),
-		Extensions:  toStringMap(data.Extensions),
+		Labels:      toStringMap(plan.Labels),
+		Annotations: toStringMap(plan.Annotations),
+		Extensions:  toStringMap(plan.Extensions),
 	}
 
 	workspace, err := resource.client.WorkspaceV1.CreateOrUpdateWorkspace(ctx, workspace)
@@ -283,14 +296,12 @@ func (resource *WorkspaceResource) Update(ctx context.Context, req resource.Upda
 
 	tflog.Debug(ctx, "waiting for workspace to become active")
 
-	// Wait until it is active
-
 	tref := secapi.TenantReference{
 		Tenant: secapi.TenantID(workspace.Metadata.Tenant),
 		Name:   workspace.Metadata.Name,
 	}
 
-	config := resource.retry.with(data.Retry).untilState(sdk.ResourceStateActive)
+	config := resource.retry.with(plan.Retry).withTimeout(updateTimeout).untilState(sdk.ResourceStateActive)
 
 	workspace, err = resource.client.WorkspaceV1.GetWorkspaceUntilState(ctx, tref, config)
 	if err != nil {
@@ -301,15 +312,16 @@ func (resource *WorkspaceResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 
-	data, diags := workspaceToResourceModel(ctx, workspace)
-	resp.Diagnostics.Append(diags...)
+	state, diags2 := workspaceToResourceModel(ctx, workspace)
+	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	state.Timeouts = plan.Timeouts
 
 	tflog.Info(ctx, "workspace updated")
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
 func (resource *WorkspaceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -319,10 +331,14 @@ func (resource *WorkspaceResource) Delete(ctx context.Context, req resource.Dele
 		return
 	}
 
+	deleteTimeout, diags := data.Timeouts.Delete(ctx, 10*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	ctx = resource.logFields(ctx, data)
 	tflog.Debug(ctx, "deleting workspace")
-
-	// Delete the workspace
 
 	workspace := &sdk.Workspace{
 		Metadata: &sdk.RegionalResourceMetadata{
@@ -342,14 +358,12 @@ func (resource *WorkspaceResource) Delete(ctx context.Context, req resource.Dele
 
 	tflog.Debug(ctx, "waiting for workspace to be deleted")
 
-	// Wait until it is deleted
-
 	tref := secapi.TenantReference{
 		Tenant: secapi.TenantID(workspace.Metadata.Tenant),
 		Name:   workspace.Metadata.Name,
 	}
 
-	config := resource.retry.with(data.Retry).observer()
+	config := resource.retry.with(data.Retry).withTimeout(deleteTimeout).observer()
 
 	err = resource.client.WorkspaceV1.WatchWorkspaceUntilDeleted(ctx, tref, config)
 	if err != nil {

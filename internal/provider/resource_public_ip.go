@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -12,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	sdk "github.com/eu-sovereign-cloud/go-sdk/pkg/spec/schema"
@@ -58,11 +60,15 @@ func (r *PublicIpResource) ImportState(ctx context.Context, req resource.ImportS
 type PublicIpResourceModel struct {
 	publicIpModel
 
-	Retry *RetryModel `tfsdk:"retry"`
+	Retry    *RetryModel    `tfsdk:"retry"`
+	Timeouts timeouts.Value `tfsdk:"timeouts"`
 }
 
-func (r *PublicIpResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *PublicIpResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = tfschema.Schema{
+		Blocks: map[string]tfschema.Block{
+			"timeouts": timeouts.BlockAll(ctx),
+		},
 		Attributes: map[string]tfschema.Attribute{
 			"id": tfschema.StringAttribute{
 				Computed: true,
@@ -193,6 +199,12 @@ func (r *PublicIpResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
+	createTimeout, diags := data.Timeouts.Create(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "creating public ip")
 
@@ -215,7 +227,7 @@ func (r *PublicIpResource) Create(ctx context.Context, req resource.CreateReques
 		Name:      ip.Metadata.Name,
 	}
 
-	ip, err = r.client.NetworkV1.GetPublicIpUntilState(ctx, wref, r.retry.with(data.Retry).untilState(sdk.ResourceStateActive))
+	ip, err = r.client.NetworkV1.GetPublicIpUntilState(ctx, wref, r.retry.with(data.Retry).withTimeout(createTimeout).untilState(sdk.ResourceStateActive))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading public ip",
@@ -224,11 +236,12 @@ func (r *PublicIpResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	result, diags := publicIpToResourceModel(ctx, ip)
-	resp.Diagnostics.Append(diags...)
+	result, diags2 := publicIpToResourceModel(ctx, ip)
+	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "public ip created")
 
@@ -280,6 +293,12 @@ func (r *PublicIpResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
+	updateTimeout, diags := data.Timeouts.Update(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "updating public ip")
 
@@ -302,7 +321,7 @@ func (r *PublicIpResource) Update(ctx context.Context, req resource.UpdateReques
 		Name:      ip.Metadata.Name,
 	}
 
-	ip, err = r.client.NetworkV1.GetPublicIpUntilState(ctx, wref, r.retry.with(data.Retry).untilState(sdk.ResourceStateActive))
+	ip, err = r.client.NetworkV1.GetPublicIpUntilState(ctx, wref, r.retry.with(data.Retry).withTimeout(updateTimeout).untilState(sdk.ResourceStateActive))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading public ip",
@@ -311,11 +330,12 @@ func (r *PublicIpResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	result, diags := publicIpToResourceModel(ctx, ip)
-	resp.Diagnostics.Append(diags...)
+	result, diags2 := publicIpToResourceModel(ctx, ip)
+	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "public ip updated")
 
@@ -325,6 +345,12 @@ func (r *PublicIpResource) Update(ctx context.Context, req resource.UpdateReques
 func (r *PublicIpResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var data PublicIpResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	deleteTimeout, diags := data.Timeouts.Delete(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -357,7 +383,7 @@ func (r *PublicIpResource) Delete(ctx context.Context, req resource.DeleteReques
 		Name:      ip.Metadata.Name,
 	}
 
-	err = r.client.NetworkV1.WatchPublicIpUntilDeleted(ctx, wref, r.retry.with(data.Retry).observer())
+	err = r.client.NetworkV1.WatchPublicIpUntilDeleted(ctx, wref, r.retry.with(data.Retry).withTimeout(deleteTimeout).observer())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading public ip",

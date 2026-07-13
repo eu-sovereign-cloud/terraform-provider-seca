@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -13,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	sdk "github.com/eu-sovereign-cloud/go-sdk/pkg/spec/schema"
@@ -65,16 +67,20 @@ type SubnetCidrModel struct {
 type SubnetResourceModel struct {
 	subnetModel
 
-	Retry *RetryModel `tfsdk:"retry"`
+	Retry    *RetryModel    `tfsdk:"retry"`
+	Timeouts timeouts.Value `tfsdk:"timeouts"`
 }
 
-func (r *SubnetResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *SubnetResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	cidrAttrs := map[string]tfschema.Attribute{
 		"ipv4": tfschema.StringAttribute{Optional: true, Computed: true},
 		"ipv6": tfschema.StringAttribute{Optional: true, Computed: true},
 	}
 
 	resp.Schema = tfschema.Schema{
+		Blocks: map[string]tfschema.Block{
+			"timeouts": timeouts.BlockAll(ctx),
+		},
 		Attributes: map[string]tfschema.Attribute{
 			"id": tfschema.StringAttribute{
 				Computed: true,
@@ -213,6 +219,12 @@ func (r *SubnetResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
+	createTimeout, diags := data.Timeouts.Create(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "creating subnet")
 
@@ -236,7 +248,7 @@ func (r *SubnetResource) Create(ctx context.Context, req resource.CreateRequest,
 		Name:      sub.Metadata.Name,
 	}
 
-	sub, err = r.client.NetworkV1.GetSubnetUntilState(ctx, nref, r.retry.with(data.Retry).untilState(sdk.ResourceStateActive))
+	sub, err = r.client.NetworkV1.GetSubnetUntilState(ctx, nref, r.retry.with(data.Retry).withTimeout(createTimeout).untilState(sdk.ResourceStateActive))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading subnet",
@@ -245,11 +257,12 @@ func (r *SubnetResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	result, diags := subnetToResourceModel(ctx, sub)
-	resp.Diagnostics.Append(diags...)
+	result, diags2 := subnetToResourceModel(ctx, sub)
+	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "subnet created")
 
@@ -302,6 +315,12 @@ func (r *SubnetResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
+	updateTimeout, diags := data.Timeouts.Update(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "updating subnet")
 
@@ -325,7 +344,7 @@ func (r *SubnetResource) Update(ctx context.Context, req resource.UpdateRequest,
 		Name:      sub.Metadata.Name,
 	}
 
-	sub, err = r.client.NetworkV1.GetSubnetUntilState(ctx, nref, r.retry.with(data.Retry).untilState(sdk.ResourceStateActive))
+	sub, err = r.client.NetworkV1.GetSubnetUntilState(ctx, nref, r.retry.with(data.Retry).withTimeout(updateTimeout).untilState(sdk.ResourceStateActive))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading subnet",
@@ -334,11 +353,12 @@ func (r *SubnetResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	result, diags := subnetToResourceModel(ctx, sub)
-	resp.Diagnostics.Append(diags...)
+	result, diags2 := subnetToResourceModel(ctx, sub)
+	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "subnet updated")
 
@@ -348,6 +368,12 @@ func (r *SubnetResource) Update(ctx context.Context, req resource.UpdateRequest,
 func (r *SubnetResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var data SubnetResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	deleteTimeout, diags := data.Timeouts.Delete(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -382,7 +408,7 @@ func (r *SubnetResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		Name:      sub.Metadata.Name,
 	}
 
-	err = r.client.NetworkV1.WatchSubnetUntilDeleted(ctx, nref, r.retry.with(data.Retry).observer())
+	err = r.client.NetworkV1.WatchSubnetUntilDeleted(ctx, nref, r.retry.with(data.Retry).withTimeout(deleteTimeout).observer())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading subnet",

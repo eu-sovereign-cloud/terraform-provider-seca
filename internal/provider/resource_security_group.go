@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -14,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	sdk "github.com/eu-sovereign-cloud/go-sdk/pkg/spec/schema"
@@ -86,10 +88,11 @@ type SGRuleModel struct {
 type SecurityGroupResourceModel struct {
 	securityGroupModel
 
-	Retry *RetryModel `tfsdk:"retry"`
+	Retry    *RetryModel    `tfsdk:"retry"`
+	Timeouts timeouts.Value `tfsdk:"timeouts"`
 }
 
-func (r *SecurityGroupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *SecurityGroupResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	portsAttrs := map[string]tfschema.Attribute{
 		"from": tfschema.Int64Attribute{Optional: true},
 		"to":   tfschema.Int64Attribute{Optional: true},
@@ -113,6 +116,9 @@ func (r *SecurityGroupResource) Schema(_ context.Context, _ resource.SchemaReque
 	}
 
 	resp.Schema = tfschema.Schema{
+		Blocks: map[string]tfschema.Block{
+			"timeouts": timeouts.BlockAll(ctx),
+		},
 		Attributes: map[string]tfschema.Attribute{
 			"id": tfschema.StringAttribute{
 				Computed: true,
@@ -238,6 +244,12 @@ func (r *SecurityGroupResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
+	createTimeout, diags := data.Timeouts.Create(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "creating security group")
 
@@ -264,7 +276,7 @@ func (r *SecurityGroupResource) Create(ctx context.Context, req resource.CreateR
 		Name:      sg.Metadata.Name,
 	}
 
-	sg, err = r.client.NetworkV1.GetSecurityGroupUntilState(ctx, wref, r.retry.with(data.Retry).untilState(sdk.ResourceStateActive))
+	sg, err = r.client.NetworkV1.GetSecurityGroupUntilState(ctx, wref, r.retry.with(data.Retry).withTimeout(createTimeout).untilState(sdk.ResourceStateActive))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading security group",
@@ -273,11 +285,12 @@ func (r *SecurityGroupResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	result, diags := securityGroupToResourceModel(ctx, sg)
-	resp.Diagnostics.Append(diags...)
+	result, diags2 := securityGroupToResourceModel(ctx, sg)
+	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "security group created")
 
@@ -329,6 +342,12 @@ func (r *SecurityGroupResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
+	updateTimeout, diags := data.Timeouts.Update(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "updating security group")
 
@@ -355,7 +374,7 @@ func (r *SecurityGroupResource) Update(ctx context.Context, req resource.UpdateR
 		Name:      sg.Metadata.Name,
 	}
 
-	sg, err = r.client.NetworkV1.GetSecurityGroupUntilState(ctx, wref, r.retry.with(data.Retry).untilState(sdk.ResourceStateActive))
+	sg, err = r.client.NetworkV1.GetSecurityGroupUntilState(ctx, wref, r.retry.with(data.Retry).withTimeout(updateTimeout).untilState(sdk.ResourceStateActive))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading security group",
@@ -364,11 +383,12 @@ func (r *SecurityGroupResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	result, diags := securityGroupToResourceModel(ctx, sg)
-	resp.Diagnostics.Append(diags...)
+	result, diags2 := securityGroupToResourceModel(ctx, sg)
+	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "security group updated")
 
@@ -378,6 +398,12 @@ func (r *SecurityGroupResource) Update(ctx context.Context, req resource.UpdateR
 func (r *SecurityGroupResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var data SecurityGroupResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	deleteTimeout, diags := data.Timeouts.Delete(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -410,7 +436,7 @@ func (r *SecurityGroupResource) Delete(ctx context.Context, req resource.DeleteR
 		Name:      sg.Metadata.Name,
 	}
 
-	err = r.client.NetworkV1.WatchSecurityGroupUntilDeleted(ctx, wref, r.retry.with(data.Retry).observer())
+	err = r.client.NetworkV1.WatchSecurityGroupUntilDeleted(ctx, wref, r.retry.with(data.Retry).withTimeout(deleteTimeout).observer())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading security group",

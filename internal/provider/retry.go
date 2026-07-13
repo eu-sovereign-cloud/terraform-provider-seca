@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"math"
 	"time"
 
 	tfschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -51,6 +52,15 @@ func (c retryConfig) with(override *RetryModel) retryConfig {
 	}
 	if !override.MaxAttempts.IsNull() && !override.MaxAttempts.IsUnknown() {
 		c.maxAttempts = numberToInt(override.MaxAttempts)
+	}
+	return c
+}
+
+// withTimeout derives MaxAttempts from the given duration divided by the polling interval,
+// overriding any max_attempts set via the retry block. timeout=0 leaves MaxAttempts unchanged.
+func (c retryConfig) withTimeout(timeout time.Duration) retryConfig {
+	if timeout > 0 && c.interval > 0 {
+		c.maxAttempts = int(math.Ceil(float64(timeout) / float64(c.interval)))
 	}
 	return c
 }
