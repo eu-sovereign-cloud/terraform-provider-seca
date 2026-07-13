@@ -735,6 +735,7 @@ func roleAssignmentToBaseModel(ctx context.Context, ra *sdk.RoleAssignment) (rol
 
 	return model, diags
 }
+
 type instanceVolumeModel struct {
 	DeviceId types.String `tfsdk:"device_id"`
 }
