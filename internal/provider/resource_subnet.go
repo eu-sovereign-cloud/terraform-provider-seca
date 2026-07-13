@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
@@ -70,8 +71,16 @@ type SubnetResourceModel struct {
 
 func (r *SubnetResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	cidrAttrs := map[string]tfschema.Attribute{
-		"ipv4": tfschema.StringAttribute{Optional: true, Computed: true},
-		"ipv6": tfschema.StringAttribute{Optional: true, Computed: true},
+		"ipv4": tfschema.StringAttribute{
+			Optional:   true,
+			Computed:   true,
+			Validators: []validator.String{CIDRv4Validator()},
+		},
+		"ipv6": tfschema.StringAttribute{
+			Optional:   true,
+			Computed:   true,
+			Validators: []validator.String{CIDRv6Validator()},
+		},
 	}
 
 	resp.Schema = tfschema.Schema{
