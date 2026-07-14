@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
-func testAccGlobalClient(ctx context.Context) (*secapi.GlobalClient, error) {
+func testAccGlobalClient() (*secapi.GlobalClient, error) {
 	return secapi.NewGlobalClient(&secapi.GlobalConfig{
 		AuthToken: testAccToken,
 		Endpoints: secapi.GlobalEndpoints{
@@ -24,7 +24,7 @@ func testAccGlobalClient(ctx context.Context) (*secapi.GlobalClient, error) {
 func testAccCheckRoleDestroy(s *terraform.State) error {
 	ctx := context.Background()
 
-	client, err := testAccGlobalClient(ctx)
+	client, err := testAccGlobalClient()
 	if err != nil {
 		return err
 	}

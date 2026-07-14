@@ -14,7 +14,7 @@ import (
 func testAccCheckRoleAssignmentDestroy(s *terraform.State) error {
 	ctx := context.Background()
 
-	client, err := testAccGlobalClient(ctx)
+	client, err := testAccGlobalClient()
 	if err != nil {
 		return err
 	}
