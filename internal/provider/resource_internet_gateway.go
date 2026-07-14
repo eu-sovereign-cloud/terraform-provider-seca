@@ -192,6 +192,9 @@ func (r *InternetGatewayResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, createTimeout)
+	defer cancel()
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "creating internet gateway")
 
@@ -286,6 +289,9 @@ func (r *InternetGatewayResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
+	defer cancel()
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "updating internet gateway")
 
@@ -341,6 +347,9 @@ func (r *InternetGatewayResource) Delete(ctx context.Context, req resource.Delet
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
+	defer cancel()
 
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "deleting internet gateway")

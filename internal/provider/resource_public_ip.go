@@ -205,6 +205,9 @@ func (r *PublicIpResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, createTimeout)
+	defer cancel()
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "creating public ip")
 
@@ -299,6 +302,9 @@ func (r *PublicIpResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
+	defer cancel()
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "updating public ip")
 
@@ -354,6 +360,9 @@ func (r *PublicIpResource) Delete(ctx context.Context, req resource.DeleteReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
+	defer cancel()
 
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "deleting public ip")

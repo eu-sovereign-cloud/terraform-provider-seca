@@ -216,6 +216,9 @@ func (r *RouteTableResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, createTimeout)
+	defer cancel()
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "creating route table")
 
@@ -316,6 +319,9 @@ func (r *RouteTableResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
+	defer cancel()
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "updating route table")
 
@@ -376,6 +382,9 @@ func (r *RouteTableResource) Delete(ctx context.Context, req resource.DeleteRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
+	defer cancel()
 
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "deleting route table")

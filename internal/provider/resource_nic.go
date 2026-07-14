@@ -225,6 +225,9 @@ func (r *NicResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, createTimeout)
+	defer cancel()
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "creating nic")
 
@@ -323,6 +326,9 @@ func (r *NicResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		return
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
+	defer cancel()
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "updating nic")
 
@@ -382,6 +388,9 @@ func (r *NicResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
+	defer cancel()
 
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "deleting nic")

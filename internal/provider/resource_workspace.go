@@ -168,6 +168,9 @@ func (resource *WorkspaceResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, createTimeout)
+	defer cancel()
+
 	ctx = resource.logFields(ctx, plan)
 	tflog.Debug(ctx, "creating workspace")
 
@@ -272,6 +275,9 @@ func (resource *WorkspaceResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
+	defer cancel()
+
 	ctx = resource.logFields(ctx, plan)
 	tflog.Debug(ctx, "updating workspace")
 
@@ -336,6 +342,9 @@ func (resource *WorkspaceResource) Delete(ctx context.Context, req resource.Dele
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
+	defer cancel()
 
 	ctx = resource.logFields(ctx, data)
 	tflog.Debug(ctx, "deleting workspace")

@@ -182,6 +182,9 @@ func (resource *ImageResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, createTimeout)
+	defer cancel()
+
 	ctx = resource.logFields(ctx, data)
 	tflog.Debug(ctx, "creating image")
 
@@ -283,6 +286,9 @@ func (resource *ImageResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
+	defer cancel()
+
 	ctx = resource.logFields(ctx, data)
 	tflog.Debug(ctx, "updating image")
 
@@ -344,6 +350,9 @@ func (resource *ImageResource) Delete(ctx context.Context, req resource.DeleteRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
+	defer cancel()
 
 	ctx = resource.logFields(ctx, data)
 	tflog.Debug(ctx, "deleting image")

@@ -195,6 +195,9 @@ func (resource *BlockStorageResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, createTimeout)
+	defer cancel()
+
 	ctx = resource.logFields(ctx, data)
 	tflog.Debug(ctx, "creating block storage")
 
@@ -298,6 +301,9 @@ func (resource *BlockStorageResource) Update(ctx context.Context, req resource.U
 		return
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
+	defer cancel()
+
 	ctx = resource.logFields(ctx, data)
 	tflog.Debug(ctx, "updating block storage")
 
@@ -360,6 +366,9 @@ func (resource *BlockStorageResource) Delete(ctx context.Context, req resource.D
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
+	defer cancel()
 
 	ctx = resource.logFields(ctx, data)
 	tflog.Debug(ctx, "deleting block storage")
