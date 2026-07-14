@@ -157,6 +157,7 @@ func (p *SecaProvider) Resources(_ context.Context) []func() resource.Resource {
 		newNetworkResource,
 		newInternetGatewayResource,
 		newRoleResource,
+		newRoleAssignmentResource,
 		newRouteTableResource,
 		newSubnetResource,
 		newSecurityGroupResource,

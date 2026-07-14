@@ -648,21 +648,18 @@ func roleToBaseModel(ctx context.Context, role *sdk.Role) (roleModel, diag.Diagn
 	return model, diags
 }
 
-//nolint:unused
 var scopeAttrTypes = map[string]attr.Type{
 	"tenants":    types.ListType{ElemType: types.StringType},
 	"regions":    types.ListType{ElemType: types.StringType},
 	"workspaces": types.ListType{ElemType: types.StringType},
 }
 
-//nolint:unused
 type scopeModel struct {
 	Tenants    types.List `tfsdk:"tenants"`
 	Regions    types.List `tfsdk:"regions"`
 	Workspaces types.List `tfsdk:"workspaces"`
 }
 
-//nolint:unused
 type roleAssignmentModel struct {
 	Id               types.String `tfsdk:"id"`
 	Name             types.String `tfsdk:"name"`
@@ -681,7 +678,6 @@ type roleAssignmentModel struct {
 	Roles  types.List `tfsdk:"roles"`
 }
 
-//nolint:unused
 func roleAssignmentToBaseModel(ctx context.Context, ra *sdk.RoleAssignment) (roleAssignmentModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
