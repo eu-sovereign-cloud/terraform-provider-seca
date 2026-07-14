@@ -43,7 +43,7 @@ func testAccCheckInstanceDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccInstanceResourceConfig(sshKey string) string {
+func testAccInstanceResourceConfig(sshKey string, labels map[string]string) string {
 	return testAccProviderConfig() + fmt.Sprintf(`
 resource "seca_workspace" "test" {
   name = "workspace-1"
@@ -68,16 +68,17 @@ resource "seca_instance" "test" {
   sku_id   = data.seca_instance_sku.test.id
   ssh_keys = [%q]
   zone     = "zone-a"
+  labels   = %s
 
   boot_volume = {
     device_id = seca_block_storage.boot.id
   }
 }
-`, sshKey)
+`, sshKey, formatLabels(labels))
 }
 
-func testAccInstanceDataSourceConfig(sshKey string) string {
-	return testAccInstanceResourceConfig(sshKey) + `
+func testAccInstanceDataSourceConfig(sshKey string, labels map[string]string) string {
+	return testAccInstanceResourceConfig(sshKey, labels) + `
 data "seca_instance" "test" {
   name         = seca_instance.test.name
   workspace_id = seca_workspace.test.name
@@ -93,7 +94,7 @@ func TestAccInstance(t *testing.T) {
 		CheckDestroy:             testAccCheckInstanceDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccInstanceResourceConfig(sshKey),
+				Config: testAccInstanceResourceConfig(sshKey, map[string]string{"env": "dev"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("seca_instance.test", "name", "instance-1"),
 					resource.TestCheckResourceAttr("seca_instance.test", "workspace_id", "workspace-1"),
@@ -103,6 +104,14 @@ func TestAccInstance(t *testing.T) {
 					resource.TestCheckResourceAttrSet("seca_instance.test", "region"),
 					resource.TestCheckResourceAttrSet("seca_instance.test", "power_state"),
 					resource.TestCheckResourceAttr("seca_instance.test", "boot_volume.device_id", "boot-vol-1"),
+					resource.TestCheckResourceAttr("seca_instance.test", "labels.env", "dev"),
+				),
+			},
+			{
+				Config: testAccInstanceResourceConfig(sshKey, map[string]string{"env": "prod"}),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("seca_instance.test", "name", "instance-1"),
+					resource.TestCheckResourceAttr("seca_instance.test", "labels.env", "prod"),
 				),
 			},
 			{
@@ -112,9 +121,10 @@ func TestAccInstance(t *testing.T) {
 				ImportStateId:     "workspace-1/instance-1",
 			},
 			{
-				Config: testAccInstanceDataSourceConfig(sshKey),
+				Config: testAccInstanceDataSourceConfig(sshKey, map[string]string{"env": "prod"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("seca_instance.test", "name", "instance-1"),
+					resource.TestCheckResourceAttr("seca_instance.test", "labels.env", "prod"),
 					resource.TestCheckResourceAttr("data.seca_instance.test", "name", "instance-1"),
 					resource.TestCheckResourceAttrSet("data.seca_instance.test", "id"),
 					resource.TestCheckResourceAttrSet("data.seca_instance.test", "power_state"),
