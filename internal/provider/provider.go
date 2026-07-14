@@ -162,6 +162,7 @@ func (p *SecaProvider) Resources(_ context.Context) []func() resource.Resource {
 		newSecurityGroupResource,
 		newPublicIpResource,
 		newNicResource,
+		newInstanceResource,
 	}
 }
 
@@ -182,5 +183,6 @@ func (p *SecaProvider) DataSources(_ context.Context) []func() datasource.DataSo
 		newPublicIpDataSource,
 		newNicDataSource,
 		newInstanceSkuDataSource,
+		newInstanceDataSource,
 	}
 }

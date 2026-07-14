@@ -735,3 +735,135 @@ func roleAssignmentToBaseModel(ctx context.Context, ra *sdk.RoleAssignment) (rol
 
 	return model, diags
 }
+
+type instanceVolumeModel struct {
+	DeviceId types.String `tfsdk:"device_id"`
+}
+
+type instanceModel struct {
+	Id               types.String `tfsdk:"id"`
+	Name             types.String `tfsdk:"name"`
+	WorkspaceId      types.String `tfsdk:"workspace_id"`
+	Tenant           types.String `tfsdk:"tenant"`
+	Region           types.String `tfsdk:"region"`
+	ResourceProvider types.String `tfsdk:"resource_provider"`
+	CreatedAt        types.String `tfsdk:"created_at"`
+	DeletedAt        types.String `tfsdk:"deleted_at"`
+	LastModifiedAt   types.String `tfsdk:"last_modified_at"`
+
+	Labels      types.Map `tfsdk:"labels"`
+	Annotations types.Map `tfsdk:"annotations"`
+	Extensions  types.Map `tfsdk:"extensions"`
+
+	SkuId             types.String        `tfsdk:"sku_id"`
+	PrimaryNicId      types.String        `tfsdk:"primary_nic_id"`
+	Zone              types.String        `tfsdk:"zone"`
+	SshKeys           types.List          `tfsdk:"ssh_keys"`
+	BootVolume        instanceVolumeModel `tfsdk:"boot_volume"`
+	DataVolumes       types.List          `tfsdk:"data_volumes"`
+	AdditionalNicIds  types.List          `tfsdk:"additional_nic_ids"`
+	SecurityGroupId   types.String        `tfsdk:"security_group_id"`
+	UserData          types.String        `tfsdk:"user_data"`
+	AntiAffinityGroup types.String        `tfsdk:"anti_affinity_group"`
+	PowerState        types.String        `tfsdk:"power_state"`
+	PowerStateSince   types.String        `tfsdk:"power_state_since"`
+}
+
+func instanceToBaseModel(ctx context.Context, inst *sdk.Instance) (instanceModel, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	model := instanceModel{}
+	model.Id = types.StringValue(inst.Metadata.Ref)
+	model.Name = types.StringValue(inst.Metadata.Name)
+	model.WorkspaceId = types.StringValue(inst.Metadata.Workspace)
+	model.Tenant = types.StringValue(inst.Metadata.Tenant)
+	model.Region = types.StringValue(inst.Metadata.Region)
+	model.ResourceProvider = refToResourceProvider(inst.Metadata.Ref)
+	model.CreatedAt = fromTime(inst.Metadata.CreatedAt)
+	model.DeletedAt = fromTimePtr(inst.Metadata.DeletedAt)
+	model.LastModifiedAt = fromTime(inst.Metadata.LastModifiedAt)
+
+	labels, d := fromStringMap(ctx, inst.Labels)
+	diags.Append(d...)
+	model.Labels = labels
+
+	annotations, d := fromStringMap(ctx, inst.Annotations)
+	diags.Append(d...)
+	model.Annotations = annotations
+
+	extensions, d := fromStringMap(ctx, inst.Extensions)
+	diags.Append(d...)
+	model.Extensions = extensions
+
+	model.SkuId = types.StringValue(inst.Spec.SkuRef.Resource)
+	model.PrimaryNicId = fromRefPtr(inst.Spec.PrimaryNicRef)
+	model.Zone = fromNonEmptyString(inst.Spec.Zone)
+	model.SecurityGroupId = fromRefPtr(inst.Spec.SecurityGroupRef)
+	model.UserData = fromNonEmptyString(inst.Spec.UserData)
+	model.AntiAffinityGroup = fromNonEmptyString(inst.Spec.AntiAffinityGroup)
+
+	sshKeys, d := types.ListValueFrom(ctx, types.StringType, inst.Spec.SshKeys)
+	diags.Append(d...)
+	model.SshKeys = sshKeys
+
+	model.BootVolume = instanceVolumeModel{
+		DeviceId: types.StringValue(inst.Spec.BootVolume.DeviceRef.Resource),
+	}
+
+	dataVolumes, d := instanceVolumesToList(ctx, inst.Spec.DataVolumes)
+	diags.Append(d...)
+	model.DataVolumes = dataVolumes
+
+	additionalNicIds, d := refsToList(ctx, inst.Spec.AdditionalNicRefs)
+	diags.Append(d...)
+	model.AdditionalNicIds = additionalNicIds
+
+	if inst.Status != nil {
+		model.PowerState = types.StringValue(string(inst.Status.PowerState))
+		model.PowerStateSince = fromTimePtr(inst.Status.PowerStateSince)
+	} else {
+		model.PowerState = types.StringNull()
+		model.PowerStateSince = types.StringNull()
+	}
+
+	return model, diags
+}
+
+func instanceVolumesToList(ctx context.Context, vols []sdk.VolumeReference) (types.List, diag.Diagnostics) {
+	if len(vols) == 0 {
+		return types.ListValueMust(
+			instanceVolumeObjectType(),
+			[]attr.Value{},
+		), nil
+	}
+
+	objs := make([]instanceVolumeModel, 0, len(vols))
+	for _, v := range vols {
+		objs = append(objs, instanceVolumeModel{
+			DeviceId: types.StringValue(v.DeviceRef.Resource),
+		})
+	}
+
+	return types.ListValueFrom(ctx, instanceVolumeObjectType(), objs)
+}
+
+func instanceVolumeObjectType() attr.Type {
+	return types.ObjectType{
+		AttrTypes: map[string]attr.Type{
+			"device_id": types.StringType,
+		},
+	}
+}
+
+func refsToList(ctx context.Context, refs []sdk.Reference) (types.List, diag.Diagnostics) {
+	if len(refs) == 0 {
+		return types.ListValueMust(types.StringType, []attr.Value{}), nil
+	}
+
+	vals := make([]string, 0, len(refs))
+	for _, r := range refs {
+		vals = append(vals, r.Resource)
+	}
+
+	return types.ListValueFrom(ctx, types.StringType, vals)
+}
