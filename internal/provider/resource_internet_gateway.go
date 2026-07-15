@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -59,11 +61,15 @@ func (r *InternetGatewayResource) ImportState(ctx context.Context, req resource.
 type InternetGatewayResourceModel struct {
 	internetGatewayModel
 
-	Retry *RetryModel `tfsdk:"retry"`
+	Retry    *RetryModel    `tfsdk:"retry"`
+	Timeouts timeouts.Value `tfsdk:"timeouts"`
 }
 
-func (r *InternetGatewayResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *InternetGatewayResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = tfschema.Schema{
+		Blocks: map[string]tfschema.Block{
+			"timeouts": timeouts.BlockAll(ctx),
+		},
 		Attributes: map[string]tfschema.Attribute{
 			"id": tfschema.StringAttribute{
 				Computed: true,
@@ -180,6 +186,15 @@ func (r *InternetGatewayResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
+	createTimeout, diags := data.Timeouts.Create(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, createTimeout)
+	defer cancel()
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "creating internet gateway")
 
@@ -202,7 +217,7 @@ func (r *InternetGatewayResource) Create(ctx context.Context, req resource.Creat
 		Name:      gtw.Metadata.Name,
 	}
 
-	gtw, err = r.client.NetworkV1.GetInternetGatewayUntilState(ctx, wref, r.retry.with(data.Retry).untilState(sdk.ResourceStateActive))
+	gtw, err = r.client.NetworkV1.GetInternetGatewayUntilState(ctx, wref, r.retry.with(data.Retry).withTimeout(createTimeout).untilState(sdk.ResourceStateActive))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading internet gateway",
@@ -211,11 +226,12 @@ func (r *InternetGatewayResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	result, diags := internetGatewayToResourceModel(ctx, gtw)
-	resp.Diagnostics.Append(diags...)
+	result, diags2 := internetGatewayToResourceModel(ctx, gtw)
+	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "internet gateway created")
 
@@ -267,6 +283,15 @@ func (r *InternetGatewayResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
+	updateTimeout, diags := data.Timeouts.Update(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
+	defer cancel()
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "updating internet gateway")
 
@@ -289,7 +314,7 @@ func (r *InternetGatewayResource) Update(ctx context.Context, req resource.Updat
 		Name:      gtw.Metadata.Name,
 	}
 
-	gtw, err = r.client.NetworkV1.GetInternetGatewayUntilState(ctx, wref, r.retry.with(data.Retry).untilState(sdk.ResourceStateActive))
+	gtw, err = r.client.NetworkV1.GetInternetGatewayUntilState(ctx, wref, r.retry.with(data.Retry).withTimeout(updateTimeout).untilState(sdk.ResourceStateActive))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading internet gateway",
@@ -298,11 +323,12 @@ func (r *InternetGatewayResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	result, diags := internetGatewayToResourceModel(ctx, gtw)
-	resp.Diagnostics.Append(diags...)
+	result, diags2 := internetGatewayToResourceModel(ctx, gtw)
+	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "internet gateway updated")
 
@@ -315,6 +341,15 @@ func (r *InternetGatewayResource) Delete(ctx context.Context, req resource.Delet
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	deleteTimeout, diags := data.Timeouts.Delete(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
+	defer cancel()
 
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "deleting internet gateway")
@@ -344,7 +379,7 @@ func (r *InternetGatewayResource) Delete(ctx context.Context, req resource.Delet
 		Name:      gtw.Metadata.Name,
 	}
 
-	err = r.client.NetworkV1.WatchInternetGatewayUntilDeleted(ctx, wref, r.retry.with(data.Retry).observer())
+	err = r.client.NetworkV1.WatchInternetGatewayUntilDeleted(ctx, wref, r.retry.with(data.Retry).withTimeout(deleteTimeout).observer())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading internet gateway",

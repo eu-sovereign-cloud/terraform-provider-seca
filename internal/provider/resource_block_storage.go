@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -58,11 +60,15 @@ func (r *BlockStorageResource) ImportState(ctx context.Context, req resource.Imp
 type BlockStorageResourceModel struct {
 	blockStorageModel
 
-	Retry *RetryModel `tfsdk:"retry"`
+	Retry    *RetryModel    `tfsdk:"retry"`
+	Timeouts timeouts.Value `tfsdk:"timeouts"`
 }
 
-func (resource *BlockStorageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (resource *BlockStorageResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = tfschema.Schema{
+		Blocks: map[string]tfschema.Block{
+			"timeouts": timeouts.BlockAll(ctx),
+		},
 		Attributes: map[string]tfschema.Attribute{
 			"id": tfschema.StringAttribute{
 				Computed: true,
@@ -183,6 +189,15 @@ func (resource *BlockStorageResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
+	createTimeout, diags := data.Timeouts.Create(ctx, 10*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, createTimeout)
+	defer cancel()
+
 	ctx = resource.logFields(ctx, data)
 	tflog.Debug(ctx, "creating block storage")
 
@@ -209,7 +224,7 @@ func (resource *BlockStorageResource) Create(ctx context.Context, req resource.C
 		Name:      block.Metadata.Name,
 	}
 
-	config := resource.retry.with(data.Retry).untilState(sdk.ResourceStateActive)
+	config := resource.retry.with(data.Retry).withTimeout(createTimeout).untilState(sdk.ResourceStateActive)
 
 	block, err = resource.client.StorageV1.GetBlockStorageUntilState(ctx, wref, config)
 	if err != nil {
@@ -220,11 +235,13 @@ func (resource *BlockStorageResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
-	data, diags := blockStorageToResourceModel(ctx, block)
-	resp.Diagnostics.Append(diags...)
+	savedTimeouts := data.Timeouts
+	data, diags2 := blockStorageToResourceModel(ctx, block)
+	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	data.Timeouts = savedTimeouts
 
 	tflog.Info(ctx, "block storage created")
 
@@ -278,6 +295,15 @@ func (resource *BlockStorageResource) Update(ctx context.Context, req resource.U
 		return
 	}
 
+	updateTimeout, diags := data.Timeouts.Update(ctx, 10*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
+	defer cancel()
+
 	ctx = resource.logFields(ctx, data)
 	tflog.Debug(ctx, "updating block storage")
 
@@ -304,7 +330,7 @@ func (resource *BlockStorageResource) Update(ctx context.Context, req resource.U
 		Name:      block.Metadata.Name,
 	}
 
-	config := resource.retry.with(data.Retry).untilState(sdk.ResourceStateActive)
+	config := resource.retry.with(data.Retry).withTimeout(updateTimeout).untilState(sdk.ResourceStateActive)
 
 	block, err = resource.client.StorageV1.GetBlockStorageUntilState(ctx, wref, config)
 	if err != nil {
@@ -315,11 +341,13 @@ func (resource *BlockStorageResource) Update(ctx context.Context, req resource.U
 		return
 	}
 
-	data, diags := blockStorageToResourceModel(ctx, block)
-	resp.Diagnostics.Append(diags...)
+	savedTimeouts := data.Timeouts
+	data, diags2 := blockStorageToResourceModel(ctx, block)
+	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	data.Timeouts = savedTimeouts
 
 	tflog.Info(ctx, "block storage updated")
 
@@ -332,6 +360,15 @@ func (resource *BlockStorageResource) Delete(ctx context.Context, req resource.D
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	deleteTimeout, diags := data.Timeouts.Delete(ctx, 10*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
+	defer cancel()
 
 	ctx = resource.logFields(ctx, data)
 	tflog.Debug(ctx, "deleting block storage")
@@ -365,7 +402,7 @@ func (resource *BlockStorageResource) Delete(ctx context.Context, req resource.D
 		Name:      block.Metadata.Name,
 	}
 
-	config := resource.retry.with(data.Retry).observer()
+	config := resource.retry.with(data.Retry).withTimeout(deleteTimeout).observer()
 
 	err = resource.client.StorageV1.WatchBlockStorageUntilDeleted(ctx, wref, config)
 	if err != nil {

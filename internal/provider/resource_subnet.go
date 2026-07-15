@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -66,10 +68,11 @@ type SubnetCidrModel struct {
 type SubnetResourceModel struct {
 	subnetModel
 
-	Retry *RetryModel `tfsdk:"retry"`
+	Retry    *RetryModel    `tfsdk:"retry"`
+	Timeouts timeouts.Value `tfsdk:"timeouts"`
 }
 
-func (r *SubnetResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *SubnetResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	cidrAttrs := map[string]tfschema.Attribute{
 		"ipv4": tfschema.StringAttribute{
 			Optional:   true,
@@ -84,6 +87,9 @@ func (r *SubnetResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 	}
 
 	resp.Schema = tfschema.Schema{
+		Blocks: map[string]tfschema.Block{
+			"timeouts": timeouts.BlockAll(ctx),
+		},
 		Attributes: map[string]tfschema.Attribute{
 			"id": tfschema.StringAttribute{
 				Computed: true,
@@ -222,6 +228,15 @@ func (r *SubnetResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
+	createTimeout, diags := data.Timeouts.Create(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, createTimeout)
+	defer cancel()
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "creating subnet")
 
@@ -245,7 +260,7 @@ func (r *SubnetResource) Create(ctx context.Context, req resource.CreateRequest,
 		Name:      sub.Metadata.Name,
 	}
 
-	sub, err = r.client.NetworkV1.GetSubnetUntilState(ctx, nref, r.retry.with(data.Retry).untilState(sdk.ResourceStateActive))
+	sub, err = r.client.NetworkV1.GetSubnetUntilState(ctx, nref, r.retry.with(data.Retry).withTimeout(createTimeout).untilState(sdk.ResourceStateActive))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading subnet",
@@ -254,11 +269,12 @@ func (r *SubnetResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	result, diags := subnetToResourceModel(ctx, sub)
-	resp.Diagnostics.Append(diags...)
+	result, diags2 := subnetToResourceModel(ctx, sub)
+	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "subnet created")
 
@@ -311,6 +327,15 @@ func (r *SubnetResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
+	updateTimeout, diags := data.Timeouts.Update(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
+	defer cancel()
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "updating subnet")
 
@@ -334,7 +359,7 @@ func (r *SubnetResource) Update(ctx context.Context, req resource.UpdateRequest,
 		Name:      sub.Metadata.Name,
 	}
 
-	sub, err = r.client.NetworkV1.GetSubnetUntilState(ctx, nref, r.retry.with(data.Retry).untilState(sdk.ResourceStateActive))
+	sub, err = r.client.NetworkV1.GetSubnetUntilState(ctx, nref, r.retry.with(data.Retry).withTimeout(updateTimeout).untilState(sdk.ResourceStateActive))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading subnet",
@@ -343,11 +368,12 @@ func (r *SubnetResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	result, diags := subnetToResourceModel(ctx, sub)
-	resp.Diagnostics.Append(diags...)
+	result, diags2 := subnetToResourceModel(ctx, sub)
+	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "subnet updated")
 
@@ -360,6 +386,15 @@ func (r *SubnetResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	deleteTimeout, diags := data.Timeouts.Delete(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
+	defer cancel()
 
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "deleting subnet")
@@ -391,7 +426,7 @@ func (r *SubnetResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		Name:      sub.Metadata.Name,
 	}
 
-	err = r.client.NetworkV1.WatchSubnetUntilDeleted(ctx, nref, r.retry.with(data.Retry).observer())
+	err = r.client.NetworkV1.WatchSubnetUntilDeleted(ctx, nref, r.retry.with(data.Retry).withTimeout(deleteTimeout).observer())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading subnet",

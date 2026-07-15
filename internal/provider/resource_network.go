@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -72,10 +74,11 @@ var networkCidrAttrTypes = map[string]attr.Type{
 type NetworkResourceModel struct {
 	networkModel
 
-	Retry *RetryModel `tfsdk:"retry"`
+	Retry    *RetryModel    `tfsdk:"retry"`
+	Timeouts timeouts.Value `tfsdk:"timeouts"`
 }
 
-func (r *NetworkResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *NetworkResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	cidrAttrs := map[string]tfschema.Attribute{
 		"ipv4": tfschema.StringAttribute{
 			Optional:   true,
@@ -90,6 +93,9 @@ func (r *NetworkResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 	}
 
 	resp.Schema = tfschema.Schema{
+		Blocks: map[string]tfschema.Block{
+			"timeouts": timeouts.BlockAll(ctx),
+		},
 		Attributes: map[string]tfschema.Attribute{
 			"id": tfschema.StringAttribute{
 				Computed: true,
@@ -220,6 +226,15 @@ func (r *NetworkResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
+	createTimeout, diags := data.Timeouts.Create(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, createTimeout)
+	defer cancel()
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "creating network")
 
@@ -242,7 +257,7 @@ func (r *NetworkResource) Create(ctx context.Context, req resource.CreateRequest
 		Name:      net.Metadata.Name,
 	}
 
-	net, err = r.client.NetworkV1.GetNetworkUntilState(ctx, wref, r.retry.with(data.Retry).untilState(sdk.ResourceStateActive))
+	net, err = r.client.NetworkV1.GetNetworkUntilState(ctx, wref, r.retry.with(data.Retry).withTimeout(createTimeout).untilState(sdk.ResourceStateActive))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading network",
@@ -251,11 +266,12 @@ func (r *NetworkResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	result, diags := networkToResourceModel(ctx, net)
-	resp.Diagnostics.Append(diags...)
+	result, diags2 := networkToResourceModel(ctx, net)
+	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "network created")
 
@@ -307,6 +323,15 @@ func (r *NetworkResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
+	updateTimeout, diags := data.Timeouts.Update(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
+	defer cancel()
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "updating network")
 
@@ -329,7 +354,7 @@ func (r *NetworkResource) Update(ctx context.Context, req resource.UpdateRequest
 		Name:      net.Metadata.Name,
 	}
 
-	net, err = r.client.NetworkV1.GetNetworkUntilState(ctx, wref, r.retry.with(data.Retry).untilState(sdk.ResourceStateActive))
+	net, err = r.client.NetworkV1.GetNetworkUntilState(ctx, wref, r.retry.with(data.Retry).withTimeout(updateTimeout).untilState(sdk.ResourceStateActive))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading network",
@@ -338,11 +363,12 @@ func (r *NetworkResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	result, diags := networkToResourceModel(ctx, net)
-	resp.Diagnostics.Append(diags...)
+	result, diags2 := networkToResourceModel(ctx, net)
+	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "network updated")
 
@@ -355,6 +381,15 @@ func (r *NetworkResource) Delete(ctx context.Context, req resource.DeleteRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	deleteTimeout, diags := data.Timeouts.Delete(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
+	defer cancel()
 
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "deleting network")
@@ -384,7 +419,7 @@ func (r *NetworkResource) Delete(ctx context.Context, req resource.DeleteRequest
 		Name:      net.Metadata.Name,
 	}
 
-	err = r.client.NetworkV1.WatchNetworkUntilDeleted(ctx, wref, r.retry.with(data.Retry).observer())
+	err = r.client.NetworkV1.WatchNetworkUntilDeleted(ctx, wref, r.retry.with(data.Retry).withTimeout(deleteTimeout).observer())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading network",

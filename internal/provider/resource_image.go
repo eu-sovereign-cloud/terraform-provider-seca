@@ -3,7 +3,9 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -47,11 +49,15 @@ func (r *ImageResource) ImportState(ctx context.Context, req resource.ImportStat
 type ImageResourceModel struct {
 	imageModel
 
-	Retry *RetryModel `tfsdk:"retry"`
+	Retry    *RetryModel    `tfsdk:"retry"`
+	Timeouts timeouts.Value `tfsdk:"timeouts"`
 }
 
-func (resource *ImageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (resource *ImageResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = tfschema.Schema{
+		Blocks: map[string]tfschema.Block{
+			"timeouts": timeouts.BlockAll(ctx),
+		},
 		Attributes: map[string]tfschema.Attribute{
 			"id": tfschema.StringAttribute{
 				Computed: true,
@@ -170,6 +176,15 @@ func (resource *ImageResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
+	createTimeout, diags := data.Timeouts.Create(ctx, 15*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, createTimeout)
+	defer cancel()
+
 	ctx = resource.logFields(ctx, data)
 	tflog.Debug(ctx, "creating image")
 
@@ -195,7 +210,7 @@ func (resource *ImageResource) Create(ctx context.Context, req resource.CreateRe
 		Name:   image.Metadata.Name,
 	}
 
-	config := resource.retry.with(data.Retry).untilState(sdk.ResourceStateActive)
+	config := resource.retry.with(data.Retry).withTimeout(createTimeout).untilState(sdk.ResourceStateActive)
 
 	image, err = resource.client.StorageV1.GetImageUntilState(ctx, tref, config)
 	if err != nil {
@@ -206,11 +221,13 @@ func (resource *ImageResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	data, diags := imageToResourceModel(ctx, image)
-	resp.Diagnostics.Append(diags...)
+	savedTimeouts := data.Timeouts
+	data, diags2 := imageToResourceModel(ctx, image)
+	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	data.Timeouts = savedTimeouts
 
 	tflog.Info(ctx, "image created")
 
@@ -263,6 +280,15 @@ func (resource *ImageResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
+	updateTimeout, diags := data.Timeouts.Update(ctx, 15*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
+	defer cancel()
+
 	ctx = resource.logFields(ctx, data)
 	tflog.Debug(ctx, "updating image")
 
@@ -288,7 +314,7 @@ func (resource *ImageResource) Update(ctx context.Context, req resource.UpdateRe
 		Name:   image.Metadata.Name,
 	}
 
-	config := resource.retry.with(data.Retry).untilState(sdk.ResourceStateActive)
+	config := resource.retry.with(data.Retry).withTimeout(updateTimeout).untilState(sdk.ResourceStateActive)
 
 	image, err = resource.client.StorageV1.GetImageUntilState(ctx, tref, config)
 	if err != nil {
@@ -299,11 +325,13 @@ func (resource *ImageResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	data, diags := imageToResourceModel(ctx, image)
-	resp.Diagnostics.Append(diags...)
+	savedTimeouts := data.Timeouts
+	data, diags2 := imageToResourceModel(ctx, image)
+	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	data.Timeouts = savedTimeouts
 
 	tflog.Info(ctx, "image updated")
 
@@ -316,6 +344,15 @@ func (resource *ImageResource) Delete(ctx context.Context, req resource.DeleteRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	deleteTimeout, diags := data.Timeouts.Delete(ctx, 15*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
+	defer cancel()
 
 	ctx = resource.logFields(ctx, data)
 	tflog.Debug(ctx, "deleting image")
@@ -347,7 +384,7 @@ func (resource *ImageResource) Delete(ctx context.Context, req resource.DeleteRe
 		Name:   image.Metadata.Name,
 	}
 
-	config := resource.retry.with(data.Retry).observer()
+	config := resource.retry.with(data.Retry).withTimeout(deleteTimeout).observer()
 
 	err = resource.client.StorageV1.WatchImageUntilDeleted(ctx, tref, config)
 	if err != nil {

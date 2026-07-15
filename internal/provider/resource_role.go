@@ -3,7 +3,9 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -39,11 +41,15 @@ func (r *RoleResource) Metadata(_ context.Context, req resource.MetadataRequest,
 
 type RoleResourceModel struct {
 	roleModel
-	Retry *RetryModel `tfsdk:"retry"`
+	Retry    *RetryModel    `tfsdk:"retry"`
+	Timeouts timeouts.Value `tfsdk:"timeouts"`
 }
 
-func (r *RoleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *RoleResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = tfschema.Schema{
+		Blocks: map[string]tfschema.Block{
+			"timeouts": timeouts.BlockAll(ctx),
+		},
 		Attributes: map[string]tfschema.Attribute{
 			"id": tfschema.StringAttribute{
 				Computed: true,
@@ -170,6 +176,15 @@ func (r *RoleResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
+	createTimeout, diags := data.Timeouts.Create(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, createTimeout)
+	defer cancel()
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "creating role")
 
@@ -191,7 +206,7 @@ func (r *RoleResource) Create(ctx context.Context, req resource.CreateRequest, r
 		Name:   role.Metadata.Name,
 	}
 
-	config := r.retry.with(data.Retry).untilState(sdk.ResourceStateActive)
+	config := r.retry.with(data.Retry).withTimeout(createTimeout).untilState(sdk.ResourceStateActive)
 
 	role, err = r.client.AuthorizationV1.GetRoleUntilState(ctx, tref, config)
 	if err != nil {
@@ -202,13 +217,14 @@ func (r *RoleResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	result, diags := roleToResourceModel(ctx, role)
-	resp.Diagnostics.Append(diags...)
+	result, diags2 := roleToResourceModel(ctx, role)
+	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	result.Retry = data.Retry
+	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "role created")
 
@@ -261,6 +277,15 @@ func (r *RoleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
+	updateTimeout, diags := data.Timeouts.Update(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
+	defer cancel()
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "updating role")
 
@@ -282,7 +307,7 @@ func (r *RoleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		Name:   role.Metadata.Name,
 	}
 
-	config := r.retry.with(data.Retry).untilState(sdk.ResourceStateActive)
+	config := r.retry.with(data.Retry).withTimeout(updateTimeout).untilState(sdk.ResourceStateActive)
 
 	role, err = r.client.AuthorizationV1.GetRoleUntilState(ctx, tref, config)
 	if err != nil {
@@ -293,13 +318,14 @@ func (r *RoleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
-	result, diags := roleToResourceModel(ctx, role)
-	resp.Diagnostics.Append(diags...)
+	result, diags2 := roleToResourceModel(ctx, role)
+	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	result.Retry = data.Retry
+	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "role updated")
 
@@ -312,6 +338,15 @@ func (r *RoleResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	deleteTimeout, diags := data.Timeouts.Delete(ctx, 5*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
+	defer cancel()
 
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "deleting role")
@@ -339,7 +374,7 @@ func (r *RoleResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		Name:   data.Name.ValueString(),
 	}
 
-	config := r.retry.with(data.Retry).observer()
+	config := r.retry.with(data.Retry).withTimeout(deleteTimeout).observer()
 
 	err = r.client.AuthorizationV1.WatchRoleUntilDeleted(ctx, tref, config)
 	if err != nil {
