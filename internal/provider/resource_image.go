@@ -221,17 +221,17 @@ func (resource *ImageResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	savedTimeouts := data.Timeouts
-	data, diags2 := imageToResourceModel(ctx, image)
+	result, diags2 := imageToResourceModel(ctx, image)
 	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	data.Timeouts = savedTimeouts
+	result.Retry = data.Retry
+	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "image created")
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }
 
 func (resource *ImageResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -264,13 +264,15 @@ func (resource *ImageResource) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
-	data, diags := imageToResourceModel(ctx, image)
+	result, diags := imageToResourceModel(ctx, image)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Retry = data.Retry
+	result.Timeouts = data.Timeouts
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }
 
 func (resource *ImageResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -325,17 +327,17 @@ func (resource *ImageResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	savedTimeouts := data.Timeouts
-	data, diags2 := imageToResourceModel(ctx, image)
+	result, diags2 := imageToResourceModel(ctx, image)
 	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	data.Timeouts = savedTimeouts
+	result.Retry = data.Retry
+	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "image updated")
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }
 
 func (resource *ImageResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

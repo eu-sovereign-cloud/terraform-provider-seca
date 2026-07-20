@@ -268,6 +268,7 @@ func (r *NicResource) Create(ctx context.Context, req resource.CreateRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "nic created")
@@ -309,6 +310,8 @@ func (r *NicResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Retry = data.Retry
+	result.Timeouts = data.Timeouts
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }
@@ -369,6 +372,7 @@ func (r *NicResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "nic updated")

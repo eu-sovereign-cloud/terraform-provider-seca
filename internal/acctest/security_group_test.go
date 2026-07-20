@@ -63,6 +63,17 @@ resource "seca_security_group" "test" {
     }
   ]
   labels = %s
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+    update = "1m"
+    read   = "30s"
+    delete = "1m"
+  }
 }
 `, formatLabels(labels))
 }
@@ -95,6 +106,17 @@ resource "seca_security_group" "test" {
     }
   ]
   labels = %s
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+    update = "1m"
+    read   = "30s"
+    delete = "1m"
+  }
 }
 `, formatLabels(labels))
 }
@@ -119,6 +141,17 @@ resource "seca_security_group" "test" {
     }
   ]
   labels = %s
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+    update = "1m"
+    read   = "30s"
+    delete = "1m"
+  }
 }
 data "seca_security_group" "test" {
   name         = "security-group-1"
@@ -154,10 +187,11 @@ func TestAccSecurityGroup(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      "seca_security_group.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateId:     "workspace-1/security-group-1",
+				ResourceName:            "seca_security_group.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateId:           "workspace-1/security-group-1",
+				ImportStateVerifyIgnore: []string{"retry"},
 			},
 			{
 				Config: testAccSecurityGroupDataSourceConfig(map[string]string{"env": "prod"}),

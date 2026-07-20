@@ -231,6 +231,7 @@ func (r *InternetGatewayResource) Create(ctx context.Context, req resource.Creat
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "internet gateway created")
@@ -272,6 +273,8 @@ func (r *InternetGatewayResource) Read(ctx context.Context, req resource.ReadReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Retry = data.Retry
+	result.Timeouts = data.Timeouts
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }
@@ -328,6 +331,7 @@ func (r *InternetGatewayResource) Update(ctx context.Context, req resource.Updat
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "internet gateway updated")

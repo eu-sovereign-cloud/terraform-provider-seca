@@ -235,17 +235,17 @@ func (resource *BlockStorageResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
-	savedTimeouts := data.Timeouts
-	data, diags2 := blockStorageToResourceModel(ctx, block)
+	result, diags2 := blockStorageToResourceModel(ctx, block)
 	resp.Diagnostics.Append(diags2...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	data.Timeouts = savedTimeouts
+	result.Retry = data.Retry
+	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "block storage created")
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }
 
 func (resource *BlockStorageResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -279,13 +279,15 @@ func (resource *BlockStorageResource) Read(ctx context.Context, req resource.Rea
 		return
 	}
 
-	data, diags := blockStorageToResourceModel(ctx, block)
+	result, diags := blockStorageToResourceModel(ctx, block)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Retry = data.Retry
+	result.Timeouts = data.Timeouts
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }
 
 func (resource *BlockStorageResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -341,17 +343,17 @@ func (resource *BlockStorageResource) Update(ctx context.Context, req resource.U
 		return
 	}
 
-	savedTimeouts := data.Timeouts
-	data, diags2 := blockStorageToResourceModel(ctx, block)
-	resp.Diagnostics.Append(diags2...)
+	result, diags := blockStorageToResourceModel(ctx, block)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	data.Timeouts = savedTimeouts
+	result.Retry = data.Retry
+	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "block storage updated")
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }
 
 func (resource *BlockStorageResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

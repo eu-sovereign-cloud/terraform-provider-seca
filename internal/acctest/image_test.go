@@ -52,6 +52,17 @@ resource "seca_image" "test" {
   initializer      = "cloudinit-22"
   boot             = "UEFI"
   labels           = %s
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+    update = "1m"
+    read   = "30s"
+    delete = "1m"
+  }
 }
 `, formatLabels(labels))
 }
@@ -66,6 +77,17 @@ resource "seca_image" "test" {
   initializer      = "cloudinit-22"
   boot             = "UEFI"
   labels           = %s
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+    update = "1m"
+    read   = "30s"
+    delete = "1m"
+  }
 }
 data "seca_image" "test" {
   name = "image-1"
@@ -98,10 +120,11 @@ func TestAccImage(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      "seca_image.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateId:     "image-1",
+				ResourceName:            "seca_image.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateId:           "image-1",
+				ImportStateVerifyIgnore: []string{"retry"},
 			},
 			{
 				Config: testAccImageDataSourceConfig(map[string]string{"env": "prod"}),

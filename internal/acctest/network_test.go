@@ -57,6 +57,17 @@ resource "seca_network" "test" {
     ipv4 = "10.0.0.0/16"
   }
   labels = %s
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+    update = "1m"
+    read   = "30s"
+    delete = "1m"
+  }
 }
 `, formatLabels(labels))
 }
@@ -75,6 +86,17 @@ resource "seca_network" "test" {
     ipv4 = "10.0.0.0/16"
   }
   labels = %s
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+    update = "1m"
+    read   = "30s"
+    delete = "1m"
+  }
 }
 data "seca_network" "test" {
   name         = "network-1"
@@ -108,10 +130,11 @@ func TestAccNetwork(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      "seca_network.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateId:     "workspace-1/network-1",
+				ResourceName:            "seca_network.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateId:           "workspace-1/network-1",
+				ImportStateVerifyIgnore: []string{"retry"},
 			},
 			{
 				Config: testAccNetworkDataSourceConfig(map[string]string{"env": "prod"}),

@@ -3,7 +3,9 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -25,8 +27,10 @@ var (
 
 type RoleAssignmentResource struct {
 	client *secapi.GlobalClient
+
 	tenant string
-	retry  retryConfig
+
+	retry retryConfig
 }
 
 func newRoleAssignmentResource() resource.Resource {
@@ -39,11 +43,15 @@ func (r *RoleAssignmentResource) Metadata(_ context.Context, req resource.Metada
 
 type RoleAssignmentResourceModel struct {
 	roleAssignmentModel
-	Retry *RetryModel `tfsdk:"retry"`
+	Retry    *RetryModel    `tfsdk:"retry"`
+	Timeouts timeouts.Value `tfsdk:"timeouts"`
 }
 
-func (r *RoleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *RoleAssignmentResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = tfschema.Schema{
+		Blocks: map[string]tfschema.Block{
+			"timeouts": timeouts.BlockAll(ctx),
+		},
 		Attributes: map[string]tfschema.Attribute{
 			"id": tfschema.StringAttribute{
 				Computed: true,
@@ -179,6 +187,15 @@ func (r *RoleAssignmentResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
+	createTimeout, diags := data.Timeouts.Create(ctx, 10*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, createTimeout)
+	defer cancel()
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "creating role assignment")
 
@@ -204,7 +221,7 @@ func (r *RoleAssignmentResource) Create(ctx context.Context, req resource.Create
 		Name:   ra.Metadata.Name,
 	}
 
-	config := r.retry.with(data.Retry).untilState(sdk.ResourceStateActive)
+	config := r.retry.with(data.Retry).withTimeout(createTimeout).untilState(sdk.ResourceStateActive)
 
 	ra, err = r.client.AuthorizationV1.GetRoleAssignmentUntilState(ctx, tref, config)
 	if err != nil {
@@ -222,6 +239,7 @@ func (r *RoleAssignmentResource) Create(ctx context.Context, req resource.Create
 	}
 
 	result.Retry = data.Retry
+	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "role assignment created")
 
@@ -263,6 +281,7 @@ func (r *RoleAssignmentResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 
 	result.Retry = data.Retry
+	result.Timeouts = data.Timeouts
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }
@@ -273,6 +292,15 @@ func (r *RoleAssignmentResource) Update(ctx context.Context, req resource.Update
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	updateTimeout, diags := data.Timeouts.Update(ctx, 10*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
+	defer cancel()
 
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "updating role assignment")
@@ -299,7 +327,7 @@ func (r *RoleAssignmentResource) Update(ctx context.Context, req resource.Update
 		Name:   ra.Metadata.Name,
 	}
 
-	config := r.retry.with(data.Retry).untilState(sdk.ResourceStateActive)
+	config := r.retry.with(data.Retry).withTimeout(updateTimeout).untilState(sdk.ResourceStateActive)
 
 	ra, err = r.client.AuthorizationV1.GetRoleAssignmentUntilState(ctx, tref, config)
 	if err != nil {
@@ -317,6 +345,7 @@ func (r *RoleAssignmentResource) Update(ctx context.Context, req resource.Update
 	}
 
 	result.Retry = data.Retry
+	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "role assignment updated")
 
@@ -329,6 +358,15 @@ func (r *RoleAssignmentResource) Delete(ctx context.Context, req resource.Delete
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	deleteTimeout, diags := data.Timeouts.Delete(ctx, 10*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
+	defer cancel()
 
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "deleting role assignment")
@@ -356,7 +394,7 @@ func (r *RoleAssignmentResource) Delete(ctx context.Context, req resource.Delete
 		Name:   data.Name.ValueString(),
 	}
 
-	config := r.retry.with(data.Retry).observer()
+	config := r.retry.with(data.Retry).withTimeout(deleteTimeout).observer()
 
 	err = r.client.AuthorizationV1.WatchRoleAssignmentUntilDeleted(ctx, tref, config)
 	if err != nil {

@@ -306,6 +306,7 @@ func (r *SecurityGroupResource) Create(ctx context.Context, req resource.CreateR
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "security group created")
@@ -347,6 +348,8 @@ func (r *SecurityGroupResource) Read(ctx context.Context, req resource.ReadReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Retry = data.Retry
+	result.Timeouts = data.Timeouts
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }
@@ -407,6 +410,7 @@ func (r *SecurityGroupResource) Update(ctx context.Context, req resource.UpdateR
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "security group updated")

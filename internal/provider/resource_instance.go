@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -46,7 +48,8 @@ func (r *InstanceResource) Metadata(_ context.Context, req resource.MetadataRequ
 type InstanceResourceModel struct {
 	instanceModel
 
-	Retry *RetryModel `tfsdk:"retry"`
+	Retry    *RetryModel    `tfsdk:"retry"`
+	Timeouts timeouts.Value `tfsdk:"timeouts"`
 }
 
 func (r *InstanceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
@@ -63,7 +66,7 @@ func (r *InstanceResource) ImportState(ctx context.Context, req resource.ImportS
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), name)...)
 }
 
-func (r *InstanceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *InstanceResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	volumeAttrs := map[string]tfschema.Attribute{
 		"device_id": tfschema.StringAttribute{
 			Required: true,
@@ -71,6 +74,9 @@ func (r *InstanceResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 	}
 
 	resp.Schema = tfschema.Schema{
+		Blocks: map[string]tfschema.Block{
+			"timeouts": timeouts.BlockAll(ctx),
+		},
 		Attributes: map[string]tfschema.Attribute{
 			"id": tfschema.StringAttribute{
 				Computed: true,
@@ -255,6 +261,15 @@ func (r *InstanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
+	createTimeout, diags := data.Timeouts.Create(ctx, 10*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, createTimeout)
+	defer cancel()
+
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "creating instance")
 
@@ -281,7 +296,7 @@ func (r *InstanceResource) Create(ctx context.Context, req resource.CreateReques
 		Name:      inst.Metadata.Name,
 	}
 
-	config := r.retry.with(data.Retry).untilState(sdk.ResourceStateActive)
+	config := r.retry.with(data.Retry).withTimeout(createTimeout).untilState(sdk.ResourceStateActive)
 
 	inst, err = r.client.ComputeV1.GetInstanceUntilState(ctx, wref, config)
 	if err != nil {
@@ -292,15 +307,17 @@ func (r *InstanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	data, diags = instanceToResourceModel(ctx, inst)
+	result, diags := instanceToResourceModel(ctx, inst)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Retry = data.Retry
+	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "instance created")
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }
 
 func (r *InstanceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -332,13 +349,15 @@ func (r *InstanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	data, diags := instanceToResourceModel(ctx, inst)
+	result, diags := instanceToResourceModel(ctx, inst)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Retry = data.Retry
+	result.Timeouts = data.Timeouts
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }
 
 func (r *InstanceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -347,6 +366,15 @@ func (r *InstanceResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	updateTimeout, diags := data.Timeouts.Update(ctx, 10*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
+	defer cancel()
 
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "updating instance")
@@ -374,7 +402,7 @@ func (r *InstanceResource) Update(ctx context.Context, req resource.UpdateReques
 		Name:      inst.Metadata.Name,
 	}
 
-	config := r.retry.with(data.Retry).untilState(sdk.ResourceStateActive)
+	config := r.retry.with(data.Retry).withTimeout(updateTimeout).untilState(sdk.ResourceStateActive)
 
 	inst, err = r.client.ComputeV1.GetInstanceUntilState(ctx, wref, config)
 	if err != nil {
@@ -385,15 +413,17 @@ func (r *InstanceResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	data, diags = instanceToResourceModel(ctx, inst)
+	result, diags := instanceToResourceModel(ctx, inst)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Retry = data.Retry
+	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "instance updated")
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }
 
 func (r *InstanceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -402,6 +432,15 @@ func (r *InstanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	deleteTimeout, diags := data.Timeouts.Delete(ctx, 10*time.Minute)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
+	defer cancel()
 
 	ctx = r.logFields(ctx, data)
 	tflog.Debug(ctx, "deleting instance")
@@ -431,7 +470,7 @@ func (r *InstanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		Name:      inst.Metadata.Name,
 	}
 
-	config := r.retry.with(data.Retry).observer()
+	config := r.retry.with(data.Retry).withTimeout(deleteTimeout).observer()
 
 	err = r.client.ComputeV1.WatchInstanceUntilDeleted(ctx, wref, config)
 	if err != nil {

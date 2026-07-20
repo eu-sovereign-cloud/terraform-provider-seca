@@ -216,6 +216,7 @@ func (resource *WorkspaceResource) Create(ctx context.Context, req resource.Crea
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	state.Retry = plan.Retry
 	state.Timeouts = plan.Timeouts
 
 	tflog.Info(ctx, "workspace created")
@@ -253,13 +254,15 @@ func (resource *WorkspaceResource) Read(ctx context.Context, req resource.ReadRe
 		return
 	}
 
-	data, diags := workspaceToResourceModel(ctx, workspace)
+	result, diags := workspaceToResourceModel(ctx, workspace)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Retry = data.Retry
+	result.Timeouts = data.Timeouts
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }
 
 func (resource *WorkspaceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -323,6 +326,7 @@ func (resource *WorkspaceResource) Update(ctx context.Context, req resource.Upda
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	state.Retry = plan.Retry
 	state.Timeouts = plan.Timeouts
 
 	tflog.Info(ctx, "workspace updated")
