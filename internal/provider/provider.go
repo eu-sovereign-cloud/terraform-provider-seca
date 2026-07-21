@@ -178,6 +178,7 @@ func (p *SecaProvider) DataSources(_ context.Context) []func() datasource.DataSo
 		newNetworkDataSource,
 		newInternetGatewayDataSource,
 		newRoleDataSource,
+		newRoleAssignmentDataSource,
 		newRouteTableDataSource,
 		newSubnetDataSource,
 		newSecurityGroupDataSource,
