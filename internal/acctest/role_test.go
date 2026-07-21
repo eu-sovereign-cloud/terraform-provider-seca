@@ -58,6 +58,18 @@ resource "seca_role" "test" {
   name = "role-1"
 
   permissions = [%s]
+
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+    update = "1m"
+    read   = "30s"
+    delete = "1m"
+  }
 }
 `, permissions)
 }
@@ -74,6 +86,18 @@ resource "seca_role" "test" {
       verb      = ["get", "list"]
     }
   ]
+
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+    update = "1m"
+    read   = "30s"
+    delete = "1m"
+  }
 }
 data "seca_role" "test" {
   name = seca_role.test.name
@@ -118,10 +142,11 @@ func TestAccRole(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      "seca_role.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateId:     "role-1",
+				ResourceName:            "seca_role.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateId:           "role-1",
+				ImportStateVerifyIgnore: []string{"retry"},
 			},
 			{
 				Config: testAccRoleDataSourceConfig(),

@@ -66,6 +66,18 @@ resource "seca_role_assignment" "test" {
       tenants = [%s]
     }
   ]
+
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+    update = "1m"
+    read   = "30s"
+    delete = "1m"
+  }
 }
 `, subs, roles)
 }
@@ -94,6 +106,18 @@ resource "seca_role_assignment" "test" {
       tenants = [%q]
     }
   ]
+
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+    update = "1m"
+    read   = "30s"
+    delete = "1m"
+  }
 }
 
 data "seca_role_assignment" "test" {
@@ -127,10 +151,11 @@ func TestAccRoleAssignment(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      "seca_role_assignment.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateId:     "ra-1",
+				ResourceName:            "seca_role_assignment.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateId:           "ra-1",
+				ImportStateVerifyIgnore: []string{"retry"},
 			},
 			{
 				Config: testAccRoleAssignmentDataSourceConfig(),
