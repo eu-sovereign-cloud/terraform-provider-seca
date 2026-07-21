@@ -244,6 +244,7 @@ func (r *PublicIpResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "public ip created")
@@ -285,6 +286,8 @@ func (r *PublicIpResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Retry = data.Retry
+	result.Timeouts = data.Timeouts
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }
@@ -341,6 +344,7 @@ func (r *PublicIpResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "public ip updated")

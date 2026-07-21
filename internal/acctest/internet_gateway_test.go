@@ -53,6 +53,17 @@ resource "seca_internet_gateway" "test" {
   workspace_id = seca_workspace.test.name
 
   labels = %s
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+    update = "1m"
+    read   = "30s"
+    delete = "1m"
+  }
 }
 `, formatLabels(labels))
 }
@@ -67,6 +78,17 @@ resource "seca_internet_gateway" "test" {
   workspace_id = seca_workspace.test.name
 
   labels = %s
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+    update = "1m"
+    read   = "30s"
+    delete = "1m"
+  }
 }
 data "seca_internet_gateway" "test" {
   name         = "internet-gateway-1"
@@ -98,10 +120,11 @@ func TestAccInternetGateway(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      "seca_internet_gateway.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateId:     "workspace-1/internet-gateway-1",
+				ResourceName:            "seca_internet_gateway.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateId:           "workspace-1/internet-gateway-1",
+				ImportStateVerifyIgnore: []string{"retry"},
 			},
 			{
 				Config: testAccInternetGatewayDataSourceConfig(map[string]string{"env": "prod"}),

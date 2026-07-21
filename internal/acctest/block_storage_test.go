@@ -55,6 +55,17 @@ resource "seca_block_storage" "test" {
   size_gb = 10
   sku_id  = "storage-skus/RD500"
   labels  = %s
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+    update = "1m"
+    read   = "30s"
+    delete = "1m"
+  }
 }
 `, formatLabels(labels))
 }
@@ -71,6 +82,17 @@ resource "seca_block_storage" "test" {
   size_gb = 10
   sku_id  = "storage-skus/RD500"
   labels  = %s
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+    update = "1m"
+    read   = "30s"
+    delete = "1m"
+  }
 }
 data "seca_block_storage" "test" {
   name         = "block-storage-1"
@@ -103,10 +125,11 @@ func TestAccBlockStorage(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      "seca_block_storage.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateId:     "workspace-1/block-storage-1",
+				ResourceName:            "seca_block_storage.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateId:           "workspace-1/block-storage-1",
+				ImportStateVerifyIgnore: []string{"retry"},
 			},
 			{
 				Config: testAccBlockStorageDataSourceConfig(map[string]string{"env": "prod"}),

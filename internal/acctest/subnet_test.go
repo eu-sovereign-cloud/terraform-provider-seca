@@ -73,6 +73,17 @@ resource "seca_subnet" "test" {
   }
   route_table_id = seca_route_table.test.name
   labels         = %s
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+    update = "1m"
+    read   = "30s"
+    delete = "1m"
+  }
 }
 `, formatLabels(labels))
 }
@@ -105,6 +116,17 @@ resource "seca_subnet" "test" {
     ipv4 = "10.0.1.0/24"
   }
   labels = %s
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+    update = "1m"
+    read   = "30s"
+    delete = "1m"
+  }
 }
 `, formatLabels(labels))
 }
@@ -138,6 +160,17 @@ resource "seca_subnet" "test" {
   }
   route_table_id = seca_route_table.test.name
   labels         = %s
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+    update = "1m"
+    read   = "30s"
+    delete = "1m"
+  }
 }
 data "seca_subnet" "test" {
   name         = "subnet-1"
@@ -173,10 +206,11 @@ func TestAccSubnet(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      "seca_subnet.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateId:     "workspace-1/network-1/subnet-1",
+				ResourceName:            "seca_subnet.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateId:           "workspace-1/network-1/subnet-1",
+				ImportStateVerifyIgnore: []string{"retry"},
 			},
 			{
 				Config: testAccSubnetDataSourceConfig(map[string]string{"env": "prod"}),

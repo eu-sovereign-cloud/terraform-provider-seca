@@ -74,6 +74,17 @@ resource "seca_route_table" "test" {
     }
   ]
   labels = %s
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+    update = "1m"
+    read   = "30s"
+    delete = "1m"
+  }
 }
 `, formatLabels(labels))
 }
@@ -112,6 +123,17 @@ resource "seca_route_table" "test" {
     }
   ]
   labels = %s
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+    update = "1m"
+    read   = "30s"
+    delete = "1m"
+  }
 }
 `, formatLabels(labels))
 }
@@ -146,6 +168,17 @@ resource "seca_route_table" "test" {
     }
   ]
   labels = %s
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+    update = "1m"
+    read   = "30s"
+    delete = "1m"
+  }
 }
 data "seca_route_table" "test" {
   name         = "route-table-1"
@@ -182,10 +215,11 @@ func TestAccRouteTable(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      "seca_route_table.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateId:     "workspace-1/network-1/route-table-1",
+				ResourceName:            "seca_route_table.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateId:           "workspace-1/network-1/route-table-1",
+				ImportStateVerifyIgnore: []string{"retry"},
 			},
 			{
 				Config: testAccRouteTableDataSourceConfig(map[string]string{"env": "prod"}),

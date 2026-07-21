@@ -54,6 +54,17 @@ resource "seca_public_ip" "test" {
 
   version = "IPv4"
   labels  = %s
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+    update = "1m"
+    read   = "30s"
+    delete = "1m"
+  }
 }
 `, formatLabels(labels))
 }
@@ -69,6 +80,17 @@ resource "seca_public_ip" "test" {
 
   version = "IPv4"
   labels  = %s
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+    update = "1m"
+    read   = "30s"
+    delete = "1m"
+  }
 }
 data "seca_public_ip" "test" {
   name         = "public-ip-1"
@@ -101,10 +123,11 @@ func TestAccPublicIp(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      "seca_public_ip.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateId:     "workspace-1/public-ip-1",
+				ResourceName:            "seca_public_ip.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateId:           "workspace-1/public-ip-1",
+				ImportStateVerifyIgnore: []string{"retry"},
 			},
 			{
 				Config: testAccPublicIpDataSourceConfig(map[string]string{"env": "prod"}),

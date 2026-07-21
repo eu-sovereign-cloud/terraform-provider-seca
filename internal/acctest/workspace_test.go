@@ -47,6 +47,17 @@ func testAccWorkspaceResourceConfig(labels map[string]string) string {
 resource "seca_workspace" "test" {
   name   = "workspace-1"
   labels = %s
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+	update = "1m"
+	read =   "30s"
+    delete = "1m"
+  }
 }
 `, formatLabels(labels))
 }
@@ -56,6 +67,17 @@ func testAccWorkspaceDataSourceConfig(labels map[string]string) string {
 resource "seca_workspace" "test" {
   name   = "workspace-1"
   labels = %s
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+	update = "1m"
+	read =   "30s"
+    delete = "1m"
+  }  
 }
 data "seca_workspace" "test" {
   name = "workspace-1"
@@ -85,10 +107,11 @@ func TestAccWorkspace(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      "seca_workspace.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateId:     "workspace-1",
+				ResourceName:            "seca_workspace.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateId:           "workspace-1",
+				ImportStateVerifyIgnore: []string{"retry"},
 			},
 			{
 				Config: testAccWorkspaceDataSourceConfig(map[string]string{"env": "prod"}),

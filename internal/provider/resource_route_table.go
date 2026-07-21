@@ -260,6 +260,7 @@ func (r *RouteTableResource) Create(ctx context.Context, req resource.CreateRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "route table created")
@@ -302,6 +303,8 @@ func (r *RouteTableResource) Read(ctx context.Context, req resource.ReadRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Retry = data.Retry
+	result.Timeouts = data.Timeouts
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }
@@ -363,6 +366,7 @@ func (r *RouteTableResource) Update(ctx context.Context, req resource.UpdateRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
 
 	tflog.Info(ctx, "route table updated")

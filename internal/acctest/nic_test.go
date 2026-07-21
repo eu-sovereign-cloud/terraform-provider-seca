@@ -72,6 +72,17 @@ resource "seca_nic" "test" {
   subnet_id    = seca_subnet.test.id
 
   labels = %s
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+    update = "1m"
+    read   = "30s"
+    delete = "1m"
+  }
 }
 `, formatLabels(labels))
 }
@@ -105,6 +116,17 @@ resource "seca_nic" "test" {
   subnet_id    = seca_subnet.test.id
 
   labels = %s
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+    update = "1m"
+    read   = "30s"
+    delete = "1m"
+  }
 }
 data "seca_nic" "test" {
   name         = "nic-1"
@@ -137,10 +159,11 @@ func TestAccNic(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      "seca_nic.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateId:     "workspace-1/nic-1",
+				ResourceName:            "seca_nic.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateId:           "workspace-1/nic-1",
+				ImportStateVerifyIgnore: []string{"retry"},
 			},
 			{
 				Config: testAccNicDataSourceConfig(map[string]string{"env": "prod"}),
