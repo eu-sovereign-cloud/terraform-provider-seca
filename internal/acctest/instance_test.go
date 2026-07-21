@@ -59,6 +59,18 @@ resource "seca_block_storage" "boot" {
 
   size_gb = 10
   sku_id  = "storage-skus/RD500"
+
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "1m"
+    update = "1m"
+    read   = "30s"
+    delete = "1m"
+  }
 }
 
 resource "seca_instance" "test" {
@@ -72,6 +84,18 @@ resource "seca_instance" "test" {
 
   boot_volume = {
     device_id = seca_block_storage.boot.id
+  }
+
+  retry = {
+    delay        = 10
+    interval     = 10
+    max_attempts = 3
+  }
+  timeouts {
+    create = "5m"
+    update = "5m"
+    read   = "30s"
+    delete = "5m"
   }
 }
 `, sshKey, formatLabels(labels))
@@ -115,10 +139,11 @@ func TestAccInstance(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      "seca_instance.test",
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateId:     "workspace-1/instance-1",
+				ResourceName:            "seca_instance.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateId:           "workspace-1/instance-1",
+				ImportStateVerifyIgnore: []string{"retry"},
 			},
 			{
 				Config: testAccInstanceDataSourceConfig(sshKey, map[string]string{"env": "prod"}),
