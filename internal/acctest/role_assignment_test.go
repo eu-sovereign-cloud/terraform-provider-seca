@@ -66,8 +66,6 @@ resource "seca_role_assignment" "test" {
       tenants = [%s]
     }
   ]
-
-  depends_on = [seca_role.test]
 }
 `, subs, roles)
 }
@@ -96,8 +94,6 @@ resource "seca_role_assignment" "test" {
       tenants = [%q]
     }
   ]
-
-  depends_on = [seca_role.test]
 }
 
 data "seca_role_assignment" "test" {
