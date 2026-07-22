@@ -13,6 +13,7 @@ import (
 	tfschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
@@ -138,6 +139,7 @@ func (r *PublicIpResource) Schema(ctx context.Context, _ resource.SchemaRequest,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
+				Validators: []validator.String{StringEnumValidator("IPv4", "IPv6")},
 			},
 			"address": tfschema.StringAttribute{
 				Computed: true,
