@@ -78,6 +78,7 @@ output "public_ip_ip_address" {
 
 ### Optional
 
+- `address` (String)
 - `annotations` (Map of String)
 - `extensions` (Map of String)
 - `labels` (Map of String)
@@ -86,7 +87,6 @@ output "public_ip_ip_address" {
 
 ### Read-Only
 
-- `address` (String)
 - `attached_to` (String)
 - `created_at` (String)
 - `deleted_at` (String)

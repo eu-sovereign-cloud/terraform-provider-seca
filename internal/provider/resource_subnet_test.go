@@ -77,6 +77,21 @@ func TestSubnetFromModel_RoundTrip(t *testing.T) {
 	roundTripped := subnetFromModel("tenant-1", model)
 	assert.Equal(t, "10.0.1.0/24", roundTripped.Spec.Cidr.Ipv4)
 	assert.Equal(t, "route-tables/rt-1", roundTripped.Spec.RouteTableRef.Resource)
+	assert.Equal(t, "zone-1", roundTripped.Spec.Zone)
+	require.NotNil(t, roundTripped.Spec.SkuRef)
+	assert.Equal(t, "network-skus/sku-1", roundTripped.Spec.SkuRef.Resource)
+}
+
+func TestSubnetFromModel_NullSkuId(t *testing.T) {
+	sub := subnetFixture()
+	sub.Spec.SkuRef = nil
+
+	ctx := context.Background()
+	model, diags := subnetToResourceModel(ctx, sub)
+	require.False(t, diags.HasError())
+
+	roundTripped := subnetFromModel("tenant-1", model)
+	assert.Nil(t, roundTripped.Spec.SkuRef)
 }
 
 func TestSubnetFromModel_NilRouteTableId(t *testing.T) {

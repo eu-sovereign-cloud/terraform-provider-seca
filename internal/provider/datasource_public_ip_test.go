@@ -32,6 +32,7 @@ func TestPublicIpToDataSourceModel(t *testing.T) {
 		Extensions:  sdk.Extensions{"ext": "v1"},
 		Spec: sdk.PublicIpSpec{
 			Version: sdk.IPVersionIPv4,
+			Address: "203.0.113.42",
 		},
 		Status: &sdk.PublicIpStatus{
 			IpAddress:  "203.0.113.42",
