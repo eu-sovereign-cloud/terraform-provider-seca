@@ -7,3 +7,7 @@ The document generation tool looks for files in the following locations by defau
 * **provider/provider.tf** example file for the provider index page
 * **data-sources/`full data source name`/data-source.tf** example file for the named data source page
 * **resources/`full resource name`/resource.tf** example file for the named data source page
+
+## use-cases
+
+The [`use-cases/`](use-cases/README.md) directory holds complete, runnable configurations that combine multiple resources to show how the provider is used for realistic scenarios (bastion host, blue/green deployment, multi-team RBAC, etc.), rather than documenting one resource in isolation. See [`use-cases/README.md`](use-cases/README.md) for the full list.
