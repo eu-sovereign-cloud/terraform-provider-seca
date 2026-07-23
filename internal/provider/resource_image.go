@@ -118,17 +118,29 @@ func (resource *ImageResource) Schema(ctx context.Context, _ resource.SchemaRequ
 			},
 			"block_storage_id": tfschema.StringAttribute{
 				Required: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"cpu_architecture": tfschema.StringAttribute{
 				Required: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"initializer": tfschema.StringAttribute{
 				Optional: true,
-				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"boot": tfschema.StringAttribute{
 				Optional: true,
-				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"retry": retryResourceSchema(),
 		},

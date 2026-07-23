@@ -27,6 +27,7 @@ func publicIpFixture() *sdk.PublicIp {
 		},
 		Spec: sdk.PublicIpSpec{
 			Version: sdk.IPVersionIPv4,
+			Address: "203.0.113.42",
 		},
 		Status: &sdk.PublicIpStatus{
 			IpAddress:  "203.0.113.42",
@@ -60,9 +61,20 @@ func TestPublicIpToResourceModel_NilStatus(t *testing.T) {
 	model, diags := publicIpToResourceModel(context.Background(), ip)
 	require.False(t, diags.HasError())
 
-	assert.True(t, model.Address.IsNull())
+	assert.Equal(t, "203.0.113.42", model.Address.ValueString())
 	assert.True(t, model.IpAddress.IsNull())
 	assert.True(t, model.AttachedTo.IsNull())
+}
+
+func TestPublicIpToResourceModel_NoBYOIP(t *testing.T) {
+	ip := publicIpFixture()
+	ip.Spec.Address = ""
+
+	model, diags := publicIpToResourceModel(context.Background(), ip)
+	require.False(t, diags.HasError())
+
+	assert.True(t, model.Address.IsNull())
+	assert.Equal(t, "203.0.113.42", model.IpAddress.ValueString())
 }
 
 func TestPublicIpFromModel_RoundTrip(t *testing.T) {
@@ -75,4 +87,17 @@ func TestPublicIpFromModel_RoundTrip(t *testing.T) {
 	roundTripped := publicIpFromModel("tenant-1", model)
 	assert.Equal(t, sdk.IPVersionIPv4, roundTripped.Spec.Version)
 	assert.Equal(t, "workspace-1", roundTripped.Metadata.Workspace)
+	assert.Equal(t, "203.0.113.42", roundTripped.Spec.Address)
+}
+
+func TestPublicIpFromModel_NullAddress(t *testing.T) {
+	ip := publicIpFixture()
+	ip.Spec.Address = ""
+
+	ctx := context.Background()
+	model, diags := publicIpToResourceModel(ctx, ip)
+	require.False(t, diags.HasError())
+
+	roundTripped := publicIpFromModel("tenant-1", model)
+	assert.Equal(t, "", roundTripped.Spec.Address)
 }

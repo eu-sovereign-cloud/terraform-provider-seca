@@ -168,16 +168,13 @@ func (r *SubnetResource) Schema(ctx context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"route_table_id": tfschema.StringAttribute{
-				Optional: true,
+				Required: true,
 			},
 			"zone": tfschema.StringAttribute{
-				Computed: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
+				Required: true,
 			},
 			"sku_id": tfschema.StringAttribute{
-				Computed: true,
+				Optional: true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -458,13 +455,15 @@ func subnetFromModel(tenant string, data SubnetResourceModel) *sdk.Subnet {
 				Ipv4: data.Cidr.Ipv4.ValueString(),
 				Ipv6: data.Cidr.Ipv6.ValueString(),
 			},
+			RouteTableRef: sdk.Reference{
+				Resource: data.RouteTableId.ValueString(),
+			},
+			Zone: data.Zone.ValueString(),
 		},
 	}
 
-	if !data.RouteTableId.IsNull() && !data.RouteTableId.IsUnknown() {
-		sub.Spec.RouteTableRef = sdk.Reference{
-			Resource: data.RouteTableId.ValueString(),
-		}
+	if !data.SkuId.IsNull() && !data.SkuId.IsUnknown() {
+		sub.Spec.SkuRef = &sdk.Reference{Resource: data.SkuId.ValueString()}
 	}
 
 	return sub
