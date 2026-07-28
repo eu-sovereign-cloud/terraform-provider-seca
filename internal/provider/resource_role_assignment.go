@@ -95,14 +95,17 @@ func (r *RoleAssignmentResource) Schema(ctx context.Context, _ resource.SchemaRe
 			"labels": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"annotations": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"extensions": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"subs": tfschema.ListAttribute{
 				ElementType: types.StringType,

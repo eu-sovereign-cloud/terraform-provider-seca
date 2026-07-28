@@ -132,14 +132,17 @@ func (r *InstanceResource) Schema(ctx context.Context, _ resource.SchemaRequest,
 			"labels": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"annotations": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"extensions": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"sku_id": tfschema.StringAttribute{
 				Required: true,
