@@ -143,14 +143,17 @@ func (r *RouteTableResource) Schema(ctx context.Context, _ resource.SchemaReques
 			"labels": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"annotations": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"extensions": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"routes": tfschema.ListNestedAttribute{
 				Optional: true,

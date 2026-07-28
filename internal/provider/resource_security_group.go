@@ -187,14 +187,17 @@ func (r *SecurityGroupResource) Schema(ctx context.Context, _ resource.SchemaReq
 			"labels": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"annotations": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"extensions": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"rules": tfschema.ListNestedAttribute{
 				Optional: true,

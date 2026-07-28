@@ -69,10 +69,17 @@ Every resource schema must include these attributes in this order:
 "created_at":        Computed: true  (RFC3339 string)
 "deleted_at":        Computed: true  (RFC3339 string, nullable)
 "last_modified_at":  Computed: true  (RFC3339 string)
-"labels":            Optional: true  + MapAttribute{ElementType: types.StringType}
-"annotations":       Optional: true  + MapAttribute{ElementType: types.StringType}
-"extensions":        Optional: true  + MapAttribute{ElementType: types.StringType}
+"labels":            Optional: true + Computed: true  + MapAttribute{ElementType: types.StringType}
+"annotations":       Optional: true + Computed: true  + MapAttribute{ElementType: types.StringType}
+"extensions":        Optional: true + Computed: true  + MapAttribute{ElementType: types.StringType}
 ```
+
+`labels`, `annotations`, and `extensions` are `Optional+Computed` because the API
+may return entries the config never set (for example an operation timestamp the
+backend stamps into `annotations` on create). With `Optional` alone, Terraform
+rejects the server-supplied value with "Provider produced inconsistent result
+after apply". The trade-off is that removing one of these attributes from a
+config no longer clears it — the prior value is reused; set `= {}` to clear.
 
 Workspace-scoped resources add:
 ```go

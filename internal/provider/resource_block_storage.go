@@ -124,14 +124,17 @@ func (resource *BlockStorageResource) Schema(ctx context.Context, _ resource.Sch
 			"labels": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"annotations": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"extensions": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"size_gb": tfschema.Int64Attribute{
 				Required: true,

@@ -151,14 +151,17 @@ func (r *NetworkResource) Schema(ctx context.Context, _ resource.SchemaRequest, 
 			"labels": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"annotations": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"extensions": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			// sku_id is immutable after creation per SDK spec
 			"sku_id": tfschema.StringAttribute{

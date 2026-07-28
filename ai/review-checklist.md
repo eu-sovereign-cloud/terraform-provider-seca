@@ -35,7 +35,7 @@ Check these before anything else. A PR failing any of these must not be merged.
 ## Schema Design
 
 - [ ] Standard attributes present: `id` (Computed), `name` (Required + RequiresReplace), `tenant` (Computed), `region` (Computed), `created_at` (Computed), `deleted_at` (Computed), `last_modified_at` (Computed)
-- [ ] `labels`, `annotations`, `extensions` are `Optional` on resources, `Computed` on data sources
+- [ ] `labels`, `annotations`, `extensions` are `Optional+Computed` on resources (the API may return entries the config never set), `Computed` on data sources
 - [ ] `workspace_id` on workspace-scoped resources is `Required + RequiresReplace`
 - [ ] `id` is always `Computed: true`
 - [ ] No `RequiresReplace()` on Computed attributes

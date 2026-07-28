@@ -107,14 +107,17 @@ func (resource *ImageResource) Schema(ctx context.Context, _ resource.SchemaRequ
 			"labels": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"annotations": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"extensions": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"block_storage_id": tfschema.StringAttribute{
 				Required: true,

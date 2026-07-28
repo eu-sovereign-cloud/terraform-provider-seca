@@ -125,14 +125,17 @@ func (r *InternetGatewayResource) Schema(ctx context.Context, _ resource.SchemaR
 			"labels": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"annotations": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"extensions": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"egress_only": tfschema.BoolAttribute{
 				Optional: true,

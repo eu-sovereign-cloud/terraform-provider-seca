@@ -125,14 +125,17 @@ func (r *PublicIpResource) Schema(ctx context.Context, _ resource.SchemaRequest,
 			"labels": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"annotations": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"extensions": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"version": tfschema.StringAttribute{
 				Required: true,

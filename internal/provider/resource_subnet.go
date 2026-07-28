@@ -151,14 +151,17 @@ func (r *SubnetResource) Schema(ctx context.Context, _ resource.SchemaRequest, r
 			"labels": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"annotations": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"extensions": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"cidr": tfschema.SingleNestedAttribute{
 				Required:   true,

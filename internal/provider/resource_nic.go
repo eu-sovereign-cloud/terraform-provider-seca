@@ -126,14 +126,17 @@ func (r *NicResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp
 			"labels": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"annotations": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"extensions": tfschema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 			},
 			"subnet_id": tfschema.StringAttribute{
 				Required: true,
