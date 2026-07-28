@@ -93,7 +93,9 @@ output "subnet_zone" {
 - `cidr` (Attributes) (see [below for nested schema](#nestedatt--cidr))
 - `name` (String)
 - `network_id` (String)
+- `route_table_id` (String)
 - `workspace_id` (String)
+- `zone` (String)
 
 ### Optional
 
@@ -101,7 +103,7 @@ output "subnet_zone" {
 - `extensions` (Map of String)
 - `labels` (Map of String)
 - `retry` (Attributes) (see [below for nested schema](#nestedatt--retry))
-- `route_table_id` (String)
+- `sku_id` (String)
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
@@ -112,9 +114,7 @@ output "subnet_zone" {
 - `last_modified_at` (String)
 - `region` (String)
 - `resource_provider` (String)
-- `sku_id` (String)
 - `tenant` (String)
-- `zone` (String)
 
 <a id="nestedatt--cidr"></a>
 ### Nested Schema for `cidr`

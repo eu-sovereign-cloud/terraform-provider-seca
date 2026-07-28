@@ -94,7 +94,10 @@ output "nic_mac_address" {
 - `annotations` (Map of String)
 - `extensions` (Map of String)
 - `labels` (Map of String)
+- `public_ip_ids` (List of String)
 - `retry` (Attributes) (see [below for nested schema](#nestedatt--retry))
+- `security_group_ids` (List of String)
+- `sku_id` (String)
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
@@ -104,11 +107,8 @@ output "nic_mac_address" {
 - `id` (String) The ID of this resource.
 - `last_modified_at` (String)
 - `mac_address` (String)
-- `public_ip_ids` (List of String)
 - `region` (String)
 - `resource_provider` (String)
-- `security_group_ids` (List of String)
-- `sku_id` (String)
 - `tenant` (String)
 
 <a id="nestedatt--retry"></a>

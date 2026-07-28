@@ -142,7 +142,7 @@ func (r *PublicIpResource) Schema(ctx context.Context, _ resource.SchemaRequest,
 				Validators: []validator.String{StringEnumValidator("IPv4", "IPv6")},
 			},
 			"address": tfschema.StringAttribute{
-				Computed: true,
+				Optional: true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -411,6 +411,11 @@ func (r *PublicIpResource) Delete(ctx context.Context, req resource.DeleteReques
 }
 
 func publicIpFromModel(tenant string, data PublicIpResourceModel) *sdk.PublicIp {
+	var address string
+	if !data.Address.IsNull() && !data.Address.IsUnknown() {
+		address = data.Address.ValueString()
+	}
+
 	return &sdk.PublicIp{
 		Metadata: &sdk.RegionalWorkspaceResourceMetadata{
 			Tenant:    tenant,
@@ -422,6 +427,7 @@ func publicIpFromModel(tenant string, data PublicIpResourceModel) *sdk.PublicIp 
 		Extensions:  toStringMap(data.Extensions),
 		Spec: sdk.PublicIpSpec{
 			Version: sdk.IPVersion(data.Version.ValueString()),
+			Address: address,
 		},
 	}
 }

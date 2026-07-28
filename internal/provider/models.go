@@ -329,12 +329,16 @@ func publicIpToBaseModel(ctx context.Context, ip *sdk.PublicIp) (publicIpModel, 
 	model.Extensions = extensions
 
 	model.Version = types.StringValue(string(ip.Spec.Version))
+	if ip.Spec.Address != "" {
+		model.Address = types.StringValue(ip.Spec.Address)
+	} else {
+		model.Address = types.StringNull()
+	}
+
 	if ip.Status != nil {
-		model.Address = types.StringValue(ip.Status.IpAddress)
 		model.IpAddress = types.StringValue(ip.Status.IpAddress)
 		model.AttachedTo = fromRefPtr(ip.Status.AttachedTo)
 	} else {
-		model.Address = types.StringNull()
 		model.IpAddress = types.StringNull()
 		model.AttachedTo = types.StringNull()
 	}
@@ -409,7 +413,9 @@ func nicToBaseModel(ctx context.Context, nic *sdk.Nic) (nicModel, diag.Diagnosti
 		model.MacAddress = types.StringNull()
 	}
 
-	model.SecurityGroupIds = types.ListValueMust(types.StringType, []attr.Value{})
+	securityGroupIds, d := refsToStringListFromRefs(nic.Spec.SecurityGroupRefs)
+	diags.Append(d...)
+	model.SecurityGroupIds = securityGroupIds
 
 	return model, diags
 }

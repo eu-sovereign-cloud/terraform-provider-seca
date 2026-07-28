@@ -115,7 +115,7 @@ func (r *SecurityGroupResource) Schema(ctx context.Context, _ resource.SchemaReq
 			Validators: []validator.String{StringEnumValidator("ingress", "egress")},
 		},
 		"protocol": tfschema.StringAttribute{
-			Required:   true,
+			Optional:   true,
 			Validators: []validator.String{StringEnumValidator("tcp", "udp", "tcp+udp", "icmp")},
 		},
 		"ports": tfschema.SingleNestedAttribute{
@@ -207,7 +207,7 @@ func (r *SecurityGroupResource) Schema(ctx context.Context, _ resource.SchemaReq
 			},
 			"rule_refs": tfschema.ListAttribute{
 				ElementType: types.StringType,
-				Computed:    true,
+				Optional:    true,
 				PlanModifiers: []planmodifier.List{
 					listplanmodifier.UseStateForUnknown(),
 				},
@@ -483,6 +483,18 @@ func securityGroupFromModel(ctx context.Context, tenant string, data SecurityGro
 		return nil, diags
 	}
 
+	var ruleRefIds []string
+	if !data.RuleRefs.IsNull() && !data.RuleRefs.IsUnknown() {
+		diags.Append(data.RuleRefs.ElementsAs(ctx, &ruleRefIds, false)...)
+		if diags.HasError() {
+			return nil, diags
+		}
+	}
+	var ruleRefs []sdk.Reference
+	for _, id := range ruleRefIds {
+		ruleRefs = append(ruleRefs, sdk.Reference{Resource: id})
+	}
+
 	sg := &sdk.SecurityGroup{
 		Metadata: &sdk.RegionalWorkspaceResourceMetadata{
 			Tenant:    tenant,
@@ -493,7 +505,8 @@ func securityGroupFromModel(ctx context.Context, tenant string, data SecurityGro
 		Annotations: toStringMap(data.Annotations),
 		Extensions:  toStringMap(data.Extensions),
 		Spec: sdk.SecurityGroupSpec{
-			Rules: rules,
+			Rules:    rules,
+			RuleRefs: ruleRefs,
 		},
 	}
 
@@ -517,7 +530,10 @@ func sgRulesFromModel(ctx context.Context, list types.List) ([]sdk.SecurityGroup
 	for _, r := range rules {
 		spec := sdk.SecurityGroupRuleSpec{
 			Direction: sdk.SecurityGroupRuleSpecDirection(r.Direction.ValueString()),
-			Protocol:  sdk.SecurityGroupRuleSpecProtocol(r.Protocol.ValueString()),
+		}
+
+		if !r.Protocol.IsNull() && !r.Protocol.IsUnknown() {
+			spec.Protocol = sdk.SecurityGroupRuleSpecProtocol(r.Protocol.ValueString())
 		}
 
 		if !r.Ports.IsNull() && !r.Ports.IsUnknown() {
@@ -585,9 +601,14 @@ func sgRulesToListValue(ctx context.Context, specs []sdk.SecurityGroupRuleSpec) 
 			return types.ListNull(types.ObjectType{AttrTypes: sgRuleAttrTypes}), d
 		}
 
+		protocol := types.StringValue(string(s.Protocol))
+		if s.Protocol == "" {
+			protocol = types.StringNull()
+		}
+
 		obj, d := types.ObjectValue(sgRuleAttrTypes, map[string]attr.Value{
 			"direction":   types.StringValue(string(s.Direction)),
-			"protocol":    types.StringValue(string(s.Protocol)),
+			"protocol":    protocol,
 			"ports":       portsObj,
 			"source_refs": sourceRefsList,
 		})

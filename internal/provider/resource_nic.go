@@ -150,14 +150,14 @@ func (r *NicResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp
 			},
 			"public_ip_ids": tfschema.ListAttribute{
 				ElementType: types.StringType,
-				Computed:    true,
+				Optional:    true,
 				PlanModifiers: []planmodifier.List{
 					listplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"security_group_ids": tfschema.ListAttribute{
 				ElementType: types.StringType,
-				Computed:    true,
+				Optional:    true,
 				PlanModifiers: []planmodifier.List{
 					listplanmodifier.UseStateForUnknown(),
 				},
@@ -169,9 +169,9 @@ func (r *NicResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp
 				},
 			},
 			"sku_id": tfschema.StringAttribute{
-				Computed: true,
+				Optional: true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"retry": retryResourceSchema(),
@@ -447,6 +447,30 @@ func nicFromModel(ctx context.Context, tenant string, data NicResourceModel) (*s
 		}
 	}
 
+	var publicIpIds []string
+	if !data.PublicIpIds.IsNull() && !data.PublicIpIds.IsUnknown() {
+		diags.Append(data.PublicIpIds.ElementsAs(ctx, &publicIpIds, false)...)
+		if diags.HasError() {
+			return nil, diags
+		}
+	}
+	var publicIpRefs []sdk.Reference
+	for _, id := range publicIpIds {
+		publicIpRefs = append(publicIpRefs, sdk.Reference{Resource: id})
+	}
+
+	var securityGroupIds []string
+	if !data.SecurityGroupIds.IsNull() && !data.SecurityGroupIds.IsUnknown() {
+		diags.Append(data.SecurityGroupIds.ElementsAs(ctx, &securityGroupIds, false)...)
+		if diags.HasError() {
+			return nil, diags
+		}
+	}
+	var securityGroupRefs []sdk.Reference
+	for _, id := range securityGroupIds {
+		securityGroupRefs = append(securityGroupRefs, sdk.Reference{Resource: id})
+	}
+
 	nic := &sdk.Nic{
 		Metadata: &sdk.RegionalWorkspaceResourceMetadata{
 			Tenant:    tenant,
@@ -460,8 +484,14 @@ func nicFromModel(ctx context.Context, tenant string, data NicResourceModel) (*s
 			SubnetRef: sdk.Reference{
 				Resource: data.SubnetId.ValueString(),
 			},
-			Addresses: addresses,
+			Addresses:         addresses,
+			PublicIpRefs:      publicIpRefs,
+			SecurityGroupRefs: securityGroupRefs,
 		},
+	}
+
+	if !data.SkuId.IsNull() && !data.SkuId.IsUnknown() {
+		nic.Spec.SkuRef = &sdk.Reference{Resource: data.SkuId.ValueString()}
 	}
 
 	return nic, diags

@@ -72,6 +72,7 @@ resource "seca_subnet" "test" {
     ipv4 = "10.0.1.0/24"
   }
   route_table_id = seca_route_table.test.name
+  zone           = "zone-a"
   labels         = %s
   retry = {
     delay        = 10
@@ -115,7 +116,9 @@ resource "seca_subnet" "test" {
   cidr = {
     ipv4 = "10.0.1.0/24"
   }
-  labels = %s
+  route_table_id = seca_route_table.test.name
+  zone           = "zone-a"
+  labels         = %s
   retry = {
     delay        = 10
     interval     = 10
@@ -159,6 +162,7 @@ resource "seca_subnet" "test" {
     ipv4 = "10.0.1.0/24"
   }
   route_table_id = seca_route_table.test.name
+  zone           = "zone-a"
   labels         = %s
   retry = {
     delay        = 10

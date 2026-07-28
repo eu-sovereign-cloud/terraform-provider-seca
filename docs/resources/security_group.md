@@ -94,6 +94,7 @@ output "security_group_rule_refs" {
 - `extensions` (Map of String)
 - `labels` (Map of String)
 - `retry` (Attributes) (see [below for nested schema](#nestedatt--retry))
+- `rule_refs` (List of String)
 - `rules` (Attributes List) (see [below for nested schema](#nestedatt--rules))
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
@@ -105,7 +106,6 @@ output "security_group_rule_refs" {
 - `last_modified_at` (String)
 - `region` (String)
 - `resource_provider` (String)
-- `rule_refs` (List of String)
 - `tenant` (String)
 
 <a id="nestedatt--retry"></a>
@@ -124,11 +124,11 @@ Optional:
 Required:
 
 - `direction` (String)
-- `protocol` (String)
 
 Optional:
 
 - `ports` (Attributes) (see [below for nested schema](#nestedatt--rules--ports))
+- `protocol` (String)
 - `source_refs` (List of String)
 
 <a id="nestedatt--rules--ports"></a>

@@ -138,6 +138,9 @@ func (resource *BlockStorageResource) Schema(ctx context.Context, _ resource.Sch
 			},
 			"sku_id": tfschema.StringAttribute{
 				Required: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"source_image_id": tfschema.StringAttribute{
 				Optional: true,

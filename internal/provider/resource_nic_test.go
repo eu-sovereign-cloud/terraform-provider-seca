@@ -26,9 +26,10 @@ func nicFixture() *sdk.Nic {
 			LastModifiedAt: modifiedAt,
 		},
 		Spec: sdk.NicSpec{
-			SubnetRef: sdk.Reference{Resource: "subnets/subnet-1"},
-			Addresses: []string{"10.0.1.10"},
-			SkuRef:    &sdk.Reference{Resource: "network-skus/sku-1"},
+			SubnetRef:         sdk.Reference{Resource: "subnets/subnet-1"},
+			Addresses:         []string{"10.0.1.10"},
+			SkuRef:            &sdk.Reference{Resource: "network-skus/sku-1"},
+			SecurityGroupRefs: []sdk.Reference{{Resource: "security-groups/sg-1"}},
 		},
 		Status: &sdk.NicStatus{
 			MacAddress:   "aa:bb:cc:dd:ee:ff",
@@ -54,6 +55,7 @@ func TestNicToResourceModel(t *testing.T) {
 	assert.Equal(t, "aa:bb:cc:dd:ee:ff", model.MacAddress.ValueString())
 	assert.Equal(t, "network-skus/sku-1", model.SkuId.ValueString())
 	assert.Equal(t, 1, len(model.PublicIpIds.Elements()))
+	assert.Equal(t, 1, len(model.SecurityGroupIds.Elements()))
 }
 
 func TestNicToResourceModel_NilStatus(t *testing.T) {
@@ -89,4 +91,26 @@ func TestNicFromModel_RoundTrip(t *testing.T) {
 
 	assert.Equal(t, "subnets/subnet-1", roundTripped.Spec.SubnetRef.Resource)
 	assert.Equal(t, []string{"10.0.1.10"}, roundTripped.Spec.Addresses)
+	assert.Equal(t, []sdk.Reference{{Resource: "public-ips/ip-1"}}, roundTripped.Spec.PublicIpRefs)
+	assert.Equal(t, []sdk.Reference{{Resource: "security-groups/sg-1"}}, roundTripped.Spec.SecurityGroupRefs)
+	require.NotNil(t, roundTripped.Spec.SkuRef)
+	assert.Equal(t, "network-skus/sku-1", roundTripped.Spec.SkuRef.Resource)
+}
+
+func TestNicFromModel_NullOptionalRefs(t *testing.T) {
+	nic := nicFixture()
+	nic.Spec.SkuRef = nil
+	nic.Spec.SecurityGroupRefs = nil
+	nic.Status = nil
+
+	ctx := context.Background()
+	model, diags := nicToResourceModel(ctx, nic)
+	require.False(t, diags.HasError())
+
+	roundTripped, diags := nicFromModel(ctx, "tenant-1", model)
+	require.False(t, diags.HasError())
+
+	assert.Nil(t, roundTripped.Spec.PublicIpRefs)
+	assert.Nil(t, roundTripped.Spec.SecurityGroupRefs)
+	assert.Nil(t, roundTripped.Spec.SkuRef)
 }

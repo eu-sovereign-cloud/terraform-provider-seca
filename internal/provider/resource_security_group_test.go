@@ -100,6 +100,7 @@ func TestSecurityGroupFromModel_RoundTrip(t *testing.T) {
 			},
 		},
 	}
+	sg.Spec.RuleRefs = []sdk.Reference{{Resource: "security-group-rules/rule-1"}}
 
 	ctx := context.Background()
 	model, diags := securityGroupToResourceModel(ctx, sg)
@@ -113,6 +114,38 @@ func TestSecurityGroupFromModel_RoundTrip(t *testing.T) {
 	assert.Equal(t, sdk.SecurityGroupRuleProtocolTCP, roundTripped.Spec.Rules[0].Protocol)
 	require.NotNil(t, roundTripped.Spec.Rules[0].Ports)
 	assert.Equal(t, []int{80, 443}, roundTripped.Spec.Rules[0].Ports.List)
+	assert.Equal(t, []sdk.Reference{{Resource: "security-group-rules/rule-1"}}, roundTripped.Spec.RuleRefs)
+}
+
+func TestSecurityGroupFromModel_NullRuleRefs(t *testing.T) {
+	sg := securityGroupFixture()
+	sg.Spec.RuleRefs = nil
+
+	ctx := context.Background()
+	model, diags := securityGroupToResourceModel(ctx, sg)
+	require.False(t, diags.HasError())
+
+	roundTripped, diags := securityGroupFromModel(ctx, "tenant-1", model)
+	require.False(t, diags.HasError())
+
+	assert.Nil(t, roundTripped.Spec.RuleRefs)
+}
+
+func TestSecurityGroupRuleFromModel_OmittedProtocol(t *testing.T) {
+	sg := securityGroupFixture()
+	sg.Spec.Rules = []sdk.SecurityGroupRuleSpec{
+		{Direction: sdk.SecurityGroupRuleDirectionIngress},
+	}
+
+	ctx := context.Background()
+	model, diags := securityGroupToResourceModel(ctx, sg)
+	require.False(t, diags.HasError())
+
+	roundTripped, diags := securityGroupFromModel(ctx, "tenant-1", model)
+	require.False(t, diags.HasError())
+
+	require.Len(t, roundTripped.Spec.Rules, 1)
+	assert.Empty(t, roundTripped.Spec.Rules[0].Protocol)
 }
 
 func TestSecurityGroupPortsFromNilPorts(t *testing.T) {
