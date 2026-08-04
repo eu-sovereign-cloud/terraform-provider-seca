@@ -154,6 +154,7 @@ func (r *NicResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp
 			"public_ip_ids": tfschema.ListAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 				PlanModifiers: []planmodifier.List{
 					listplanmodifier.UseStateForUnknown(),
 				},
@@ -161,6 +162,7 @@ func (r *NicResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp
 			"security_group_ids": tfschema.ListAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 				PlanModifiers: []planmodifier.List{
 					listplanmodifier.UseStateForUnknown(),
 				},
