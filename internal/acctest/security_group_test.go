@@ -46,10 +46,10 @@ func testAccCheckSecurityGroupDestroy(s *terraform.State) error {
 func testAccSecurityGroupResourceConfig(labels map[string]string) string {
 	return testAccProviderConfig() + fmt.Sprintf(`
 resource "seca_workspace" "test" {
-  name = "workspace-1"
+  name = %q
 }
 resource "seca_security_group" "test" {
-  name         = "security-group-1"
+  name         = %q
   workspace_id = seca_workspace.test.id
 
   rules = [
@@ -74,16 +74,16 @@ resource "seca_security_group" "test" {
     delete = "1m"
   }
 }
-`, formatLabels(labels))
+`, testAccWorkspaceName, testAccSecurityGroupName, formatLabels(labels))
 }
 
 func testAccSecurityGroupUpdateConfig(labels map[string]string) string {
 	return testAccProviderConfig() + fmt.Sprintf(`
 resource "seca_workspace" "test" {
-  name = "workspace-1"
+  name = %q
 }
 resource "seca_security_group" "test" {
-  name         = "security-group-1"
+  name         = %q
   workspace_id = seca_workspace.test.id
 
   rules = [
@@ -116,16 +116,16 @@ resource "seca_security_group" "test" {
     delete = "1m"
   }
 }
-`, formatLabels(labels))
+`, testAccWorkspaceName, testAccSecurityGroupName, formatLabels(labels))
 }
 
 func testAccSecurityGroupDataSourceConfig(labels map[string]string) string {
 	return testAccProviderConfig() + fmt.Sprintf(`
 resource "seca_workspace" "test" {
-  name = "workspace-1"
+  name = %q
 }
 resource "seca_security_group" "test" {
-  name         = "security-group-1"
+  name         = %q
   workspace_id = seca_workspace.test.id
 
   rules = [
@@ -151,9 +151,9 @@ resource "seca_security_group" "test" {
   }
 }
 data "seca_security_group" "test" {
-  name         = "security-group-1"
+  name         = %q
   workspace_id = seca_workspace.test.id
-}`, formatLabels(labels))
+}`, testAccWorkspaceName, testAccSecurityGroupName, formatLabels(labels), testAccSecurityGroupName)
 }
 
 func TestAccSecurityGroup(t *testing.T) {
@@ -165,8 +165,8 @@ func TestAccSecurityGroup(t *testing.T) {
 			{
 				Config: testAccSecurityGroupResourceConfig(map[string]string{"env": "dev"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("seca_security_group.test", "name", "security-group-1"),
-					resource.TestCheckResourceAttr("seca_security_group.test", "workspace_id", urnWorkspace("workspace-1")),
+					resource.TestCheckResourceAttr("seca_security_group.test", "name", testAccSecurityGroupName),
+					resource.TestCheckResourceAttr("seca_security_group.test", "workspace_id", urnWorkspace(testAccWorkspaceName)),
 					resource.TestCheckResourceAttr("seca_security_group.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("seca_security_group.test", "region", testAccRegion),
 					resource.TestCheckResourceAttr("seca_security_group.test", "rules.#", "1"),
@@ -178,7 +178,7 @@ func TestAccSecurityGroup(t *testing.T) {
 			{
 				Config: testAccSecurityGroupUpdateConfig(map[string]string{"env": "prod"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("seca_security_group.test", "name", "security-group-1"),
+					resource.TestCheckResourceAttr("seca_security_group.test", "name", testAccSecurityGroupName),
 					resource.TestCheckResourceAttr("seca_security_group.test", "rules.#", "2"),
 					resource.TestCheckResourceAttr("seca_security_group.test", "labels.env", "prod"),
 				),
@@ -187,17 +187,17 @@ func TestAccSecurityGroup(t *testing.T) {
 				ResourceName:            "seca_security_group.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateId:           urnWorkspace("workspace-1") + "/security-group-1",
+				ImportStateId:           urnWorkspace(testAccWorkspaceName) + "/" + testAccSecurityGroupName,
 				ImportStateVerifyIgnore: []string{"retry"},
 			},
 			{
 				Config: testAccSecurityGroupDataSourceConfig(map[string]string{"env": "prod"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("seca_security_group.test", "name", "security-group-1"),
-					resource.TestCheckResourceAttr("seca_security_group.test", "workspace_id", urnWorkspace("workspace-1")),
+					resource.TestCheckResourceAttr("seca_security_group.test", "name", testAccSecurityGroupName),
+					resource.TestCheckResourceAttr("seca_security_group.test", "workspace_id", urnWorkspace(testAccWorkspaceName)),
 
-					resource.TestCheckResourceAttr("data.seca_security_group.test", "name", "security-group-1"),
-					resource.TestCheckResourceAttr("data.seca_security_group.test", "workspace_id", urnWorkspace("workspace-1")),
+					resource.TestCheckResourceAttr("data.seca_security_group.test", "name", testAccSecurityGroupName),
+					resource.TestCheckResourceAttr("data.seca_security_group.test", "workspace_id", urnWorkspace(testAccWorkspaceName)),
 					resource.TestCheckResourceAttr("data.seca_security_group.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("data.seca_security_group.test", "region", testAccRegion),
 					resource.TestCheckResourceAttr("data.seca_security_group.test", "state", "active"),

@@ -47,4 +47,7 @@ acc:
 	  SECA_TEST_REGION=itbg-bergamo \
 	  SECA_TEST_REGION_ENDPOINT=http://172.18.0.2:30080/providers/seca.region \
 	  SECA_TEST_AUTH_ENDPOINT=http://172.18.0.2:30080/providers/seca.authorization \
+	  SECA_TEST_STORAGE_SKU=sku-1 \
+	  SECA_TEST_INSTANCE_SKU=instance-sku-1 \
+	  SECA_TEST_NETWORK_SKU=network-sku-1 \
 	  go test -v -timeout 60m ./internal/acctest

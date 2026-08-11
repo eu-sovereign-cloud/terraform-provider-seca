@@ -55,7 +55,7 @@ func testAccCheckRoleDestroy(s *terraform.State) error {
 func testAccRoleResourceConfig(permissions string) string {
 	return testAccProviderConfig() + fmt.Sprintf(`
 resource "seca_role" "test" {
-  name = "role-1"
+  name = %q
 
   permissions = [%s]
 
@@ -71,13 +71,13 @@ resource "seca_role" "test" {
     delete = "1m"
   }
 }
-`, permissions)
+`, testAccRoleName, permissions)
 }
 
 func testAccRoleDataSourceConfig() string {
-	return testAccProviderConfig() + `
+	return testAccProviderConfig() + fmt.Sprintf(`
 resource "seca_role" "test" {
-  name = "role-1"
+  name = %q
 
   permissions = [
     {
@@ -101,8 +101,8 @@ resource "seca_role" "test" {
 }
   
 data "seca_role" "test" {
-  name = "role-1"
-}`
+  name = %q
+}`, testAccRoleName, testAccRoleName)
 }
 
 func TestAccRole(t *testing.T) {
@@ -128,7 +128,7 @@ func TestAccRole(t *testing.T) {
 			{
 				Config: testAccRoleResourceConfig(permCreate),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("seca_role.test", "name", "role-1"),
+					resource.TestCheckResourceAttr("seca_role.test", "name", testAccRoleName),
 					resource.TestCheckResourceAttr("seca_role.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("seca_role.test", "permissions.#", "1"),
 					resource.TestCheckResourceAttr("seca_role.test", "permissions.0.provider", "seca.storage/v1"),
@@ -138,7 +138,7 @@ func TestAccRole(t *testing.T) {
 			{
 				Config: testAccRoleResourceConfig(permUpdate),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("seca_role.test", "name", "role-1"),
+					resource.TestCheckResourceAttr("seca_role.test", "name", testAccRoleName),
 					resource.TestCheckResourceAttr("seca_role.test", "permissions.0.verb.#", "4"),
 				),
 			},
@@ -146,15 +146,15 @@ func TestAccRole(t *testing.T) {
 				ResourceName:            "seca_role.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateId:           "role-1",
+				ImportStateId:           testAccRoleName,
 				ImportStateVerifyIgnore: []string{"retry"},
 			},
 			{
 				Config: testAccRoleDataSourceConfig(),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("seca_role.test", "name", "role-1"),
+					resource.TestCheckResourceAttr("seca_role.test", "name", testAccRoleName),
 
-					resource.TestCheckResourceAttr("data.seca_role.test", "name", "role-1"),
+					resource.TestCheckResourceAttr("data.seca_role.test", "name", testAccRoleName),
 					resource.TestCheckResourceAttr("data.seca_role.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("data.seca_role.test", "state", "active"),
 					resource.TestCheckResourceAttr("data.seca_role.test", "permissions.#", "1"),

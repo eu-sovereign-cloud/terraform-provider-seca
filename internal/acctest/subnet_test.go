@@ -47,15 +47,15 @@ func testAccCheckSubnetDestroy(s *terraform.State) error {
 func testAccSubnetResourceConfig(labels map[string]string) string {
 	return testAccProviderConfig() + fmt.Sprintf(`
 data "seca_network_sku" "test" {
-  name = "network-sku-1"
+  name = %q
 }
 
 resource "seca_workspace" "test" {
-  name = "workspace-1"
+  name = %q
 }
 
 resource "seca_network" "test" {
-  name         = "network-1"
+  name         = %q
   workspace_id = seca_workspace.test.id
 
   sku_id = data.seca_network_sku.test.id
@@ -65,12 +65,12 @@ resource "seca_network" "test" {
 }
 
 resource "seca_internet_gateway" "test" {
-  name         = "internet-gateway-1"
+  name         = %q
   workspace_id = seca_workspace.test.id
 }
 
 resource "seca_route_table" "test" {
-  name         = "route-table-1"
+  name         = %q
   workspace_id = seca_workspace.test.id
   network_id   = seca_network.test.id
 
@@ -83,7 +83,7 @@ resource "seca_route_table" "test" {
 }
 
 resource "seca_subnet" "test" {
-  name         = "subnet-1"
+  name         = %q
   workspace_id = seca_workspace.test.id
   network_id   = seca_network.test.id
 
@@ -105,21 +105,21 @@ resource "seca_subnet" "test" {
     delete = "1m"
   }
 }
-`, formatLabels(labels))
+`, testAccNetworkSku, testAccWorkspaceName, testAccNetworkName, testAccInternetGatewayName, testAccRouteTableName, testAccSubnetName, formatLabels(labels))
 }
 
 func testAccSubnetUpdateConfig(labels map[string]string) string {
 	return testAccProviderConfig() + fmt.Sprintf(`
 data "seca_network_sku" "test" {
-  name = "network-sku-1"
+  name = %q
 }
 
 resource "seca_workspace" "test" {
-  name = "workspace-1"
+  name = %q
 }
 
 resource "seca_network" "test" {
-  name         = "network-1"
+  name         = %q
   workspace_id = seca_workspace.test.id
 
   sku_id = data.seca_network_sku.test.id
@@ -129,12 +129,12 @@ resource "seca_network" "test" {
 }
 
 resource "seca_internet_gateway" "test" {
-  name         = "internet-gateway-1"
+  name         = %q
   workspace_id = seca_workspace.test.id
 }
 
 resource "seca_route_table" "test" {
-  name         = "route-table-1"
+  name         = %q
   workspace_id = seca_workspace.test.id
   network_id   = seca_network.test.id
 
@@ -147,7 +147,7 @@ resource "seca_route_table" "test" {
 }
 
 resource "seca_subnet" "test" {
-  name         = "subnet-1"
+  name         = %q
   workspace_id = seca_workspace.test.id
   network_id   = seca_network.test.id
 
@@ -169,21 +169,21 @@ resource "seca_subnet" "test" {
     delete = "1m"
   }
 }
-`, formatLabels(labels))
+`, testAccNetworkSku, testAccWorkspaceName, testAccNetworkName, testAccInternetGatewayName, testAccRouteTableName, testAccSubnetName, formatLabels(labels))
 }
 
 func testAccSubnetDataSourceConfig(labels map[string]string) string {
 	return testAccProviderConfig() + fmt.Sprintf(`
 data "seca_network_sku" "test" {
-  name = "network-sku-1"
+  name = %q
 }
 
 resource "seca_workspace" "test" {
-  name = "workspace-1"
+  name = %q
 }
 
 resource "seca_network" "test" {
-  name         = "network-1"
+  name         = %q
   workspace_id = seca_workspace.test.id
 
   sku_id = data.seca_network_sku.test.id
@@ -193,12 +193,12 @@ resource "seca_network" "test" {
 }
 
 resource "seca_internet_gateway" "test" {
-  name         = "internet-gateway-1"
+  name         = %q
   workspace_id = seca_workspace.test.id
 }
 
 resource "seca_route_table" "test" {
-  name         = "route-table-1"
+  name         = %q
   workspace_id = seca_workspace.test.id
   network_id   = seca_network.test.id
 
@@ -211,7 +211,7 @@ resource "seca_route_table" "test" {
 }
 
 resource "seca_subnet" "test" {
-  name         = "subnet-1"
+  name         = %q
   workspace_id = seca_workspace.test.id
   network_id   = seca_network.test.id
 
@@ -235,10 +235,10 @@ resource "seca_subnet" "test" {
 }
 
 data "seca_subnet" "test" {
-  name         = "subnet-1"
+  name         = %q
   workspace_id = seca_workspace.test.id
   network_id   = seca_network.test.id
-}`, formatLabels(labels))
+}`, testAccNetworkSku, testAccWorkspaceName, testAccNetworkName, testAccInternetGatewayName, testAccRouteTableName, testAccSubnetName, formatLabels(labels), testAccSubnetName)
 }
 
 func TestAccSubnet(t *testing.T) {
@@ -250,20 +250,20 @@ func TestAccSubnet(t *testing.T) {
 			{
 				Config: testAccSubnetResourceConfig(map[string]string{"env": "dev"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("seca_subnet.test", "name", "subnet-1"),
-					resource.TestCheckResourceAttr("seca_subnet.test", "workspace_id", urnWorkspace("workspace-1")),
-					resource.TestCheckResourceAttr("seca_subnet.test", "network_id", urnNetwork("workspace-1", "network-1")),
+					resource.TestCheckResourceAttr("seca_subnet.test", "name", testAccSubnetName),
+					resource.TestCheckResourceAttr("seca_subnet.test", "workspace_id", urnWorkspace(testAccWorkspaceName)),
+					resource.TestCheckResourceAttr("seca_subnet.test", "network_id", urnNetwork(testAccWorkspaceName, testAccNetworkName)),
 					resource.TestCheckResourceAttr("seca_subnet.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("seca_subnet.test", "region", testAccRegion),
 					resource.TestCheckResourceAttr("seca_subnet.test", "cidr.ipv4", "10.0.1.0/24"),
-					resource.TestCheckResourceAttr("seca_subnet.test", "route_table_id", urnRouteTable("workspace-1", "network-1", "route-table-1")),
+					resource.TestCheckResourceAttr("seca_subnet.test", "route_table_id", urnRouteTable(testAccWorkspaceName, testAccNetworkName, testAccRouteTableName)),
 					resource.TestCheckResourceAttr("seca_subnet.test", "labels.env", "dev"),
 				),
 			},
 			{
 				Config: testAccSubnetUpdateConfig(map[string]string{"env": "prod"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("seca_subnet.test", "name", "subnet-1"),
+					resource.TestCheckResourceAttr("seca_subnet.test", "name", testAccSubnetName),
 					resource.TestCheckResourceAttr("seca_subnet.test", "labels.env", "prod"),
 				),
 			},
@@ -271,20 +271,20 @@ func TestAccSubnet(t *testing.T) {
 				ResourceName:            "seca_subnet.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateId:           urnWorkspace("workspace-1") + "/" + urnNetwork("workspace-1", "network-1") + "/subnet-1",
+				ImportStateId:           urnWorkspace(testAccWorkspaceName) + "/" + urnNetwork(testAccWorkspaceName, testAccNetworkName) + "/" + testAccSubnetName,
 				ImportStateVerifyIgnore: []string{"retry"},
 			},
 			{
 				Config: testAccSubnetDataSourceConfig(map[string]string{"env": "prod"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("seca_subnet.test", "name", "subnet-1"),
-					resource.TestCheckResourceAttr("seca_subnet.test", "workspace_id", urnWorkspace("workspace-1")),
-					resource.TestCheckResourceAttr("seca_subnet.test", "network_id", urnNetwork("workspace-1", "network-1")),
+					resource.TestCheckResourceAttr("seca_subnet.test", "name", testAccSubnetName),
+					resource.TestCheckResourceAttr("seca_subnet.test", "workspace_id", urnWorkspace(testAccWorkspaceName)),
+					resource.TestCheckResourceAttr("seca_subnet.test", "network_id", urnNetwork(testAccWorkspaceName, testAccNetworkName)),
 					resource.TestCheckResourceAttr("seca_subnet.test", "cidr.ipv4", "10.0.1.0/24"),
 
-					resource.TestCheckResourceAttr("data.seca_subnet.test", "name", "subnet-1"),
-					resource.TestCheckResourceAttr("data.seca_subnet.test", "workspace_id", urnWorkspace("workspace-1")),
-					resource.TestCheckResourceAttr("data.seca_subnet.test", "network_id", urnNetwork("workspace-1", "network-1")),
+					resource.TestCheckResourceAttr("data.seca_subnet.test", "name", testAccSubnetName),
+					resource.TestCheckResourceAttr("data.seca_subnet.test", "workspace_id", urnWorkspace(testAccWorkspaceName)),
+					resource.TestCheckResourceAttr("data.seca_subnet.test", "network_id", urnNetwork(testAccWorkspaceName, testAccNetworkName)),
 					resource.TestCheckResourceAttr("data.seca_subnet.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("data.seca_subnet.test", "region", testAccRegion),
 					resource.TestCheckResourceAttr("data.seca_subnet.test", "cidr.ipv4", "10.0.1.0/24"),
