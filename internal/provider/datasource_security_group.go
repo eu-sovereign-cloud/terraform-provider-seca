@@ -133,7 +133,7 @@ func (d *SecurityGroupDataSource) Read(ctx context.Context, req datasource.ReadR
 
 	wref := secapi.WorkspaceReference{
 		Tenant:    secapi.TenantID(d.tenant),
-		Workspace: secapi.WorkspaceID(data.WorkspaceId.ValueString()),
+		Workspace: secapi.WorkspaceID(workspaceName(data.WorkspaceId.ValueString())),
 		Name:      data.Name.ValueString(),
 	}
 
@@ -151,6 +151,8 @@ func (d *SecurityGroupDataSource) Read(ctx context.Context, req datasource.ReadR
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	result.WorkspaceId = data.WorkspaceId
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }

@@ -50,7 +50,7 @@ resource "seca_workspace" "test" {
 }
 resource "seca_public_ip" "test" {
   name         = "public-ip-1"
-  workspace_id = seca_workspace.test.name
+  workspace_id = seca_workspace.test.id
 
   version = "IPv4"
   labels  = %s
@@ -76,7 +76,7 @@ resource "seca_workspace" "test" {
 }
 resource "seca_public_ip" "test" {
   name         = "public-ip-1"
-  workspace_id = seca_workspace.test.name
+  workspace_id = seca_workspace.test.id
 
   version = "IPv4"
   labels  = %s
@@ -94,7 +94,7 @@ resource "seca_public_ip" "test" {
 }
 data "seca_public_ip" "test" {
   name         = "public-ip-1"
-  workspace_id = seca_workspace.test.name
+  workspace_id = seca_workspace.test.id
 }`, formatLabels(labels))
 }
 
@@ -108,7 +108,7 @@ func TestAccPublicIp(t *testing.T) {
 				Config: testAccPublicIpResourceConfig(map[string]string{"env": "dev"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("seca_public_ip.test", "name", "public-ip-1"),
-					resource.TestCheckResourceAttr("seca_public_ip.test", "workspace_id", "workspace-1"),
+					resource.TestCheckResourceAttr("seca_public_ip.test", "workspace_id", urnWorkspace("workspace-1")),
 					resource.TestCheckResourceAttr("seca_public_ip.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("seca_public_ip.test", "region", testAccRegion),
 					resource.TestCheckResourceAttr("seca_public_ip.test", "version", "IPv4"),
@@ -126,18 +126,18 @@ func TestAccPublicIp(t *testing.T) {
 				ResourceName:            "seca_public_ip.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateId:           "workspace-1/public-ip-1",
+				ImportStateId:           urnWorkspace("workspace-1") + "/public-ip-1",
 				ImportStateVerifyIgnore: []string{"retry"},
 			},
 			{
 				Config: testAccPublicIpDataSourceConfig(map[string]string{"env": "prod"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("seca_public_ip.test", "name", "public-ip-1"),
-					resource.TestCheckResourceAttr("seca_public_ip.test", "workspace_id", "workspace-1"),
+					resource.TestCheckResourceAttr("seca_public_ip.test", "workspace_id", urnWorkspace("workspace-1")),
 					resource.TestCheckResourceAttr("seca_public_ip.test", "version", "IPv4"),
 
 					resource.TestCheckResourceAttr("data.seca_public_ip.test", "name", "public-ip-1"),
-					resource.TestCheckResourceAttr("data.seca_public_ip.test", "workspace_id", "workspace-1"),
+					resource.TestCheckResourceAttr("data.seca_public_ip.test", "workspace_id", urnWorkspace("workspace-1")),
 					resource.TestCheckResourceAttr("data.seca_public_ip.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("data.seca_public_ip.test", "region", testAccRegion),
 					resource.TestCheckResourceAttr("data.seca_public_ip.test", "version", "IPv4"),

@@ -9,7 +9,7 @@ import (
 func testAccNetworkSkuDataSourceConfig() string {
 	return testAccProviderConfig() + `
 data "seca_network_sku" "test" {
-  name = "N10K"
+  name = "network-sku-1"
 }`
 }
 
@@ -21,7 +21,7 @@ func TestAccNetworkSku(t *testing.T) {
 			{
 				Config: testAccNetworkSkuDataSourceConfig(),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.seca_network_sku.test", "name", "N10K"),
+					resource.TestCheckResourceAttr("data.seca_network_sku.test", "name", "network-sku-1"),
 					resource.TestCheckResourceAttr("data.seca_network_sku.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("data.seca_network_sku.test", "region", testAccRegion),
 					resource.TestCheckResourceAttrSet("data.seca_network_sku.test", "bandwidth"),

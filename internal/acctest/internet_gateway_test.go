@@ -50,7 +50,7 @@ resource "seca_workspace" "test" {
 }
 resource "seca_internet_gateway" "test" {
   name         = "internet-gateway-1"
-  workspace_id = seca_workspace.test.name
+  workspace_id = seca_workspace.test.id
 
   labels = %s
   retry = {
@@ -75,7 +75,7 @@ resource "seca_workspace" "test" {
 }
 resource "seca_internet_gateway" "test" {
   name         = "internet-gateway-1"
-  workspace_id = seca_workspace.test.name
+  workspace_id = seca_workspace.test.id
 
   labels = %s
   retry = {
@@ -92,7 +92,7 @@ resource "seca_internet_gateway" "test" {
 }
 data "seca_internet_gateway" "test" {
   name         = "internet-gateway-1"
-  workspace_id = seca_workspace.test.name
+  workspace_id = seca_workspace.test.id
 }`, formatLabels(labels))
 }
 
@@ -106,7 +106,7 @@ func TestAccInternetGateway(t *testing.T) {
 				Config: testAccInternetGatewayResourceConfig(map[string]string{"env": "dev"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("seca_internet_gateway.test", "name", "internet-gateway-1"),
-					resource.TestCheckResourceAttr("seca_internet_gateway.test", "workspace_id", "workspace-1"),
+					resource.TestCheckResourceAttr("seca_internet_gateway.test", "workspace_id", urnWorkspace("workspace-1")),
 					resource.TestCheckResourceAttr("seca_internet_gateway.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("seca_internet_gateway.test", "region", testAccRegion),
 					resource.TestCheckResourceAttr("seca_internet_gateway.test", "labels.env", "dev"),
@@ -123,17 +123,17 @@ func TestAccInternetGateway(t *testing.T) {
 				ResourceName:            "seca_internet_gateway.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateId:           "workspace-1/internet-gateway-1",
+				ImportStateId:           urnWorkspace("workspace-1") + "/internet-gateway-1",
 				ImportStateVerifyIgnore: []string{"retry"},
 			},
 			{
 				Config: testAccInternetGatewayDataSourceConfig(map[string]string{"env": "prod"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("seca_internet_gateway.test", "name", "internet-gateway-1"),
-					resource.TestCheckResourceAttr("seca_internet_gateway.test", "workspace_id", "workspace-1"),
+					resource.TestCheckResourceAttr("seca_internet_gateway.test", "workspace_id", urnWorkspace("workspace-1")),
 
 					resource.TestCheckResourceAttr("data.seca_internet_gateway.test", "name", "internet-gateway-1"),
-					resource.TestCheckResourceAttr("data.seca_internet_gateway.test", "workspace_id", "workspace-1"),
+					resource.TestCheckResourceAttr("data.seca_internet_gateway.test", "workspace_id", urnWorkspace("workspace-1")),
 					resource.TestCheckResourceAttr("data.seca_internet_gateway.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("data.seca_internet_gateway.test", "region", testAccRegion),
 					resource.TestCheckResourceAttr("data.seca_internet_gateway.test", "state", "active"),

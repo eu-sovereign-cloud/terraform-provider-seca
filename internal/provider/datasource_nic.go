@@ -116,7 +116,7 @@ func (d *NicDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 
 	wref := secapi.WorkspaceReference{
 		Tenant:    secapi.TenantID(d.tenant),
-		Workspace: secapi.WorkspaceID(data.WorkspaceId.ValueString()),
+		Workspace: secapi.WorkspaceID(workspaceName(data.WorkspaceId.ValueString())),
 		Name:      data.Name.ValueString(),
 	}
 
@@ -134,6 +134,8 @@ func (d *NicDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	result.WorkspaceId = data.WorkspaceId
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }

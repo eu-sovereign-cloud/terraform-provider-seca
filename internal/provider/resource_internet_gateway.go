@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
@@ -45,7 +44,7 @@ func (r *InternetGatewayResource) Metadata(_ context.Context, req resource.Metad
 }
 
 func (r *InternetGatewayResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	workspaceID, name, ok := strings.Cut(req.ID, "/")
+	workspaceID, name, ok := cutImportName(req.ID)
 	if !ok || workspaceID == "" || name == "" {
 		resp.Diagnostics.AddError(
 			"Unexpected Import Identifier",
@@ -234,6 +233,7 @@ func (r *InternetGatewayResource) Create(ctx context.Context, req resource.Creat
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.WorkspaceId = data.WorkspaceId
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
 
@@ -254,7 +254,7 @@ func (r *InternetGatewayResource) Read(ctx context.Context, req resource.ReadReq
 
 	wref := secapi.WorkspaceReference{
 		Tenant:    secapi.TenantID(r.tenant),
-		Workspace: secapi.WorkspaceID(data.WorkspaceId.ValueString()),
+		Workspace: secapi.WorkspaceID(workspaceName(data.WorkspaceId.ValueString())),
 		Name:      data.Name.ValueString(),
 	}
 
@@ -276,6 +276,7 @@ func (r *InternetGatewayResource) Read(ctx context.Context, req resource.ReadReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.WorkspaceId = data.WorkspaceId
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
 
@@ -334,6 +335,7 @@ func (r *InternetGatewayResource) Update(ctx context.Context, req resource.Updat
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.WorkspaceId = data.WorkspaceId
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
 
@@ -364,7 +366,7 @@ func (r *InternetGatewayResource) Delete(ctx context.Context, req resource.Delet
 	gtw := &sdk.InternetGateway{
 		Metadata: &sdk.RegionalWorkspaceResourceMetadata{
 			Tenant:    r.tenant,
-			Workspace: data.WorkspaceId.ValueString(),
+			Workspace: workspaceName(data.WorkspaceId.ValueString()),
 			Name:      data.Name.ValueString(),
 		},
 	}
@@ -402,7 +404,7 @@ func internetGatewayFromModel(tenant string, data InternetGatewayResourceModel) 
 	gtw := &sdk.InternetGateway{
 		Metadata: &sdk.RegionalWorkspaceResourceMetadata{
 			Tenant:    tenant,
-			Workspace: data.WorkspaceId.ValueString(),
+			Workspace: workspaceName(data.WorkspaceId.ValueString()),
 			Name:      data.Name.ValueString(),
 		},
 		Labels:      toStringMap(data.Labels),

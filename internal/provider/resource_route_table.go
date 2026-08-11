@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
@@ -15,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
@@ -51,8 +51,9 @@ func (r *RouteTableResource) Metadata(_ context.Context, req resource.MetadataRe
 }
 
 func (r *RouteTableResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	parts := strings.SplitN(req.ID, "/", 3)
-	if len(parts) != 3 || parts[0] == "" || parts[1] == "" || parts[2] == "" {
+	scope, name, ok := cutImportName(req.ID)
+	workspaceID, networkID, scopeOk := cutImportScope(scope, "networks")
+	if !ok || !scopeOk || workspaceID == "" || networkID == "" || name == "" {
 		resp.Diagnostics.AddError(
 			"Unexpected Import Identifier",
 			fmt.Sprintf("Expected import identifier in the format \"workspace_id/network_id/name\", got: %q", req.ID),
@@ -60,9 +61,9 @@ func (r *RouteTableResource) ImportState(ctx context.Context, req resource.Impor
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("workspace_id"), parts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("network_id"), parts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), parts[2])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("workspace_id"), workspaceID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("network_id"), networkID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), name)...)
 }
 
 type RouteModel struct {
@@ -156,7 +157,8 @@ func (r *RouteTableResource) Schema(ctx context.Context, _ resource.SchemaReques
 				Computed:    true,
 			},
 			"routes": tfschema.ListNestedAttribute{
-				Optional: true,
+				Required:   true,
+				Validators: []validator.List{ListSizeValidator(1, 1000)},
 				PlanModifiers: []planmodifier.List{
 					listplanmodifier.UseStateForUnknown(),
 				},
@@ -263,8 +265,11 @@ func (r *RouteTableResource) Create(ctx context.Context, req resource.CreateRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.WorkspaceId = data.WorkspaceId
+	result.NetworkId = data.NetworkId
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
+	result.Routes = preserveEmptyList(result.Routes, data.Routes)
 
 	tflog.Info(ctx, "route table created")
 
@@ -283,8 +288,8 @@ func (r *RouteTableResource) Read(ctx context.Context, req resource.ReadRequest,
 
 	nref := secapi.NetworkReference{
 		Tenant:    secapi.TenantID(r.tenant),
-		Workspace: secapi.WorkspaceID(data.WorkspaceId.ValueString()),
-		Network:   secapi.NetworkID(data.NetworkId.ValueString()),
+		Workspace: secapi.WorkspaceID(workspaceName(data.WorkspaceId.ValueString())),
+		Network:   secapi.NetworkID(networkName(data.NetworkId.ValueString())),
 		Name:      data.Name.ValueString(),
 	}
 
@@ -306,8 +311,11 @@ func (r *RouteTableResource) Read(ctx context.Context, req resource.ReadRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.WorkspaceId = data.WorkspaceId
+	result.NetworkId = data.NetworkId
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
+	result.Routes = preserveEmptyList(result.Routes, data.Routes)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }
@@ -369,8 +377,11 @@ func (r *RouteTableResource) Update(ctx context.Context, req resource.UpdateRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.WorkspaceId = data.WorkspaceId
+	result.NetworkId = data.NetworkId
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
+	result.Routes = preserveEmptyList(result.Routes, data.Routes)
 
 	tflog.Info(ctx, "route table updated")
 
@@ -399,8 +410,8 @@ func (r *RouteTableResource) Delete(ctx context.Context, req resource.DeleteRequ
 	rt := &sdk.RouteTable{
 		Metadata: &sdk.RegionalNetworkResourceMetadata{
 			Tenant:    r.tenant,
-			Workspace: data.WorkspaceId.ValueString(),
-			Network:   data.NetworkId.ValueString(),
+			Workspace: workspaceName(data.WorkspaceId.ValueString()),
+			Network:   networkName(data.NetworkId.ValueString()),
 			Name:      data.Name.ValueString(),
 		},
 	}
@@ -447,8 +458,8 @@ func routeTableFromModel(ctx context.Context, tenant string, data RouteTableReso
 	rt := &sdk.RouteTable{
 		Metadata: &sdk.RegionalNetworkResourceMetadata{
 			Tenant:    tenant,
-			Workspace: data.WorkspaceId.ValueString(),
-			Network:   data.NetworkId.ValueString(),
+			Workspace: workspaceName(data.WorkspaceId.ValueString()),
+			Network:   networkName(data.NetworkId.ValueString()),
 			Name:      data.Name.ValueString(),
 		},
 		Labels:      toStringMap(data.Labels),
@@ -497,7 +508,7 @@ func routesToListValue(_ context.Context, specs []sdk.RouteSpec) (types.List, di
 	objType := types.ObjectType{AttrTypes: routeAttrTypes}
 
 	if len(specs) == 0 {
-		return types.ListValueMust(objType, []attr.Value{}), nil
+		return types.ListNull(objType), nil
 	}
 
 	elems := make([]attr.Value, 0, len(specs))

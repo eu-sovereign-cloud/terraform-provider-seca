@@ -112,8 +112,8 @@ func (d *RouteTableDataSource) Read(ctx context.Context, req datasource.ReadRequ
 
 	nref := secapi.NetworkReference{
 		Tenant:    secapi.TenantID(d.tenant),
-		Workspace: secapi.WorkspaceID(data.WorkspaceId.ValueString()),
-		Network:   secapi.NetworkID(data.NetworkId.ValueString()),
+		Workspace: secapi.WorkspaceID(workspaceName(data.WorkspaceId.ValueString())),
+		Network:   secapi.NetworkID(networkName(data.NetworkId.ValueString())),
 		Name:      data.Name.ValueString(),
 	}
 
@@ -131,6 +131,9 @@ func (d *RouteTableDataSource) Read(ctx context.Context, req datasource.ReadRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	result.WorkspaceId = data.WorkspaceId
+	result.NetworkId = data.NetworkId
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }

@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
@@ -45,7 +44,7 @@ func (r *PublicIpResource) Metadata(_ context.Context, req resource.MetadataRequ
 }
 
 func (r *PublicIpResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	workspaceID, name, ok := strings.Cut(req.ID, "/")
+	workspaceID, name, ok := cutImportName(req.ID)
 	if !ok || workspaceID == "" || name == "" {
 		resp.Diagnostics.AddError(
 			"Unexpected Import Identifier",
@@ -249,6 +248,7 @@ func (r *PublicIpResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.WorkspaceId = data.WorkspaceId
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
 
@@ -269,7 +269,7 @@ func (r *PublicIpResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	wref := secapi.WorkspaceReference{
 		Tenant:    secapi.TenantID(r.tenant),
-		Workspace: secapi.WorkspaceID(data.WorkspaceId.ValueString()),
+		Workspace: secapi.WorkspaceID(workspaceName(data.WorkspaceId.ValueString())),
 		Name:      data.Name.ValueString(),
 	}
 
@@ -291,6 +291,7 @@ func (r *PublicIpResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.WorkspaceId = data.WorkspaceId
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
 
@@ -349,6 +350,7 @@ func (r *PublicIpResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.WorkspaceId = data.WorkspaceId
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
 
@@ -379,7 +381,7 @@ func (r *PublicIpResource) Delete(ctx context.Context, req resource.DeleteReques
 	ip := &sdk.PublicIp{
 		Metadata: &sdk.RegionalWorkspaceResourceMetadata{
 			Tenant:    r.tenant,
-			Workspace: data.WorkspaceId.ValueString(),
+			Workspace: workspaceName(data.WorkspaceId.ValueString()),
 			Name:      data.Name.ValueString(),
 		},
 	}
@@ -422,7 +424,7 @@ func publicIpFromModel(tenant string, data PublicIpResourceModel) *sdk.PublicIp 
 	return &sdk.PublicIp{
 		Metadata: &sdk.RegionalWorkspaceResourceMetadata{
 			Tenant:    tenant,
-			Workspace: data.WorkspaceId.ValueString(),
+			Workspace: workspaceName(data.WorkspaceId.ValueString()),
 			Name:      data.Name.ValueString(),
 		},
 		Labels:      toStringMap(data.Labels),

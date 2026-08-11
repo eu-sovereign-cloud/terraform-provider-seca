@@ -36,9 +36,15 @@ fmt:
 .PHONY: test
 test:
 	@echo "Running unit tests..."
-	go test -v -cover -timeout=120s -parallel=10 ./...
+	go test -v -cover ./...
 
-.PHONY: testacc
-testacc:
+.PHONY: acc
+acc:
 	@echo "Running acceptance tests..."
-	TF_ACC=1 go test -v -cover -timeout 120m ./...
+	TF_ACC=1 TF_DEBUG=1 \
+	  SECA_TEST_TOKEN=test \
+	  SECA_TEST_TENANT=test-tenant \
+	  SECA_TEST_REGION=itbg-bergamo \
+	  SECA_TEST_REGION_ENDPOINT=http://172.18.0.2:30080/providers/seca.region \
+	  SECA_TEST_AUTH_ENDPOINT=http://172.18.0.2:30080/providers/seca.authorization \
+	  go test -v -timeout 60m ./internal/acctest

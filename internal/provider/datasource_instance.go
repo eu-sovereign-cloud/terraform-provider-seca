@@ -131,7 +131,7 @@ func (d *InstanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	wref := secapi.WorkspaceReference{
 		Tenant:    secapi.TenantID(d.tenant),
-		Workspace: secapi.WorkspaceID(data.WorkspaceId.ValueString()),
+		Workspace: secapi.WorkspaceID(workspaceName(data.WorkspaceId.ValueString())),
 		Name:      data.Name.ValueString(),
 	}
 
@@ -144,13 +144,15 @@ func (d *InstanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	data, diags := instanceToDataSourceModel(ctx, inst)
+	result, diags := instanceToDataSourceModel(ctx, inst)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	result.WorkspaceId = data.WorkspaceId
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }
 
 func instanceToDataSourceModel(ctx context.Context, inst *sdk.Instance) (InstanceDataSourceModel, diag.Diagnostics) {

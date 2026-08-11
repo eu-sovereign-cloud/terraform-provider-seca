@@ -84,6 +84,7 @@ output "route_table_routes" {
 
 - `name` (String)
 - `network_id` (String)
+- `routes` (Attributes List) (see [below for nested schema](#nestedatt--routes))
 - `workspace_id` (String)
 
 ### Optional
@@ -92,7 +93,6 @@ output "route_table_routes" {
 - `extensions` (Map of String)
 - `labels` (Map of String)
 - `retry` (Attributes) (see [below for nested schema](#nestedatt--retry))
-- `routes` (Attributes List) (see [below for nested schema](#nestedatt--routes))
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
@@ -105,6 +105,15 @@ output "route_table_routes" {
 - `resource_provider` (String)
 - `tenant` (String)
 
+<a id="nestedatt--routes"></a>
+### Nested Schema for `routes`
+
+Required:
+
+- `destination_cidr_block` (String)
+- `target_id` (String)
+
+
 <a id="nestedatt--retry"></a>
 ### Nested Schema for `retry`
 
@@ -113,15 +122,6 @@ Optional:
 - `delay` (Number)
 - `interval` (Number)
 - `max_attempts` (Number)
-
-
-<a id="nestedatt--routes"></a>
-### Nested Schema for `routes`
-
-Required:
-
-- `destination_cidr_block` (String)
-- `target_id` (String)
 
 
 <a id="nestedblock--timeouts"></a>

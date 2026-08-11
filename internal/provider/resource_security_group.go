@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
@@ -60,7 +59,7 @@ func (r *SecurityGroupResource) Metadata(_ context.Context, req resource.Metadat
 }
 
 func (r *SecurityGroupResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	workspaceID, name, ok := strings.Cut(req.ID, "/")
+	workspaceID, name, ok := cutImportName(req.ID)
 	if !ok || workspaceID == "" || name == "" {
 		resp.Diagnostics.AddError(
 			"Unexpected Import Identifier",
@@ -309,8 +308,11 @@ func (r *SecurityGroupResource) Create(ctx context.Context, req resource.CreateR
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.WorkspaceId = data.WorkspaceId
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
+	result.Rules = sgPreserveRuleShape(result.Rules, data.Rules)
+	result.RuleRefs = preserveEmptyList(result.RuleRefs, data.RuleRefs)
 
 	tflog.Info(ctx, "security group created")
 
@@ -329,7 +331,7 @@ func (r *SecurityGroupResource) Read(ctx context.Context, req resource.ReadReque
 
 	wref := secapi.WorkspaceReference{
 		Tenant:    secapi.TenantID(r.tenant),
-		Workspace: secapi.WorkspaceID(data.WorkspaceId.ValueString()),
+		Workspace: secapi.WorkspaceID(workspaceName(data.WorkspaceId.ValueString())),
 		Name:      data.Name.ValueString(),
 	}
 
@@ -351,8 +353,11 @@ func (r *SecurityGroupResource) Read(ctx context.Context, req resource.ReadReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.WorkspaceId = data.WorkspaceId
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
+	result.Rules = sgPreserveRuleShape(result.Rules, data.Rules)
+	result.RuleRefs = preserveEmptyList(result.RuleRefs, data.RuleRefs)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }
@@ -413,8 +418,11 @@ func (r *SecurityGroupResource) Update(ctx context.Context, req resource.UpdateR
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.WorkspaceId = data.WorkspaceId
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
+	result.Rules = sgPreserveRuleShape(result.Rules, data.Rules)
+	result.RuleRefs = preserveEmptyList(result.RuleRefs, data.RuleRefs)
 
 	tflog.Info(ctx, "security group updated")
 
@@ -443,7 +451,7 @@ func (r *SecurityGroupResource) Delete(ctx context.Context, req resource.DeleteR
 	sg := &sdk.SecurityGroup{
 		Metadata: &sdk.RegionalWorkspaceResourceMetadata{
 			Tenant:    r.tenant,
-			Workspace: data.WorkspaceId.ValueString(),
+			Workspace: workspaceName(data.WorkspaceId.ValueString()),
 			Name:      data.Name.ValueString(),
 		},
 	}
@@ -501,7 +509,7 @@ func securityGroupFromModel(ctx context.Context, tenant string, data SecurityGro
 	sg := &sdk.SecurityGroup{
 		Metadata: &sdk.RegionalWorkspaceResourceMetadata{
 			Tenant:    tenant,
-			Workspace: data.WorkspaceId.ValueString(),
+			Workspace: workspaceName(data.WorkspaceId.ValueString()),
 			Name:      data.Name.ValueString(),
 		},
 		Labels:      toStringMap(data.Labels),
@@ -585,7 +593,7 @@ func securityGroupToResourceModel(ctx context.Context, sg *sdk.SecurityGroup) (S
 
 func sgRulesToListValue(ctx context.Context, specs []sdk.SecurityGroupRuleSpec) (types.List, diag.Diagnostics) {
 	if len(specs) == 0 {
-		return types.ListValueMust(types.ObjectType{AttrTypes: sgRuleAttrTypes}, []attr.Value{}), nil
+		return types.ListNull(types.ObjectType{AttrTypes: sgRuleAttrTypes}), nil
 	}
 
 	elems := make([]attr.Value, 0, len(specs))
@@ -595,13 +603,18 @@ func sgRulesToListValue(ctx context.Context, specs []sdk.SecurityGroupRuleSpec) 
 			return types.ListNull(types.ObjectType{AttrTypes: sgRuleAttrTypes}), d
 		}
 
-		sourceRefs := make([]attr.Value, 0, len(s.SourceRef))
-		for _, ref := range s.SourceRef {
-			sourceRefs = append(sourceRefs, types.StringValue(ref.Resource))
-		}
-		sourceRefsList, d := types.ListValue(types.StringType, sourceRefs)
-		if d.HasError() {
-			return types.ListNull(types.ObjectType{AttrTypes: sgRuleAttrTypes}), d
+		sourceRefsList := types.ListNull(types.StringType)
+		if len(s.SourceRef) > 0 {
+			sourceRefs := make([]attr.Value, 0, len(s.SourceRef))
+			for _, ref := range s.SourceRef {
+				sourceRefs = append(sourceRefs, types.StringValue(ref.Resource))
+			}
+
+			var d diag.Diagnostics
+			sourceRefsList, d = types.ListValue(types.StringType, sourceRefs)
+			if d.HasError() {
+				return types.ListNull(types.ObjectType{AttrTypes: sgRuleAttrTypes}), d
+			}
 		}
 
 		protocol := types.StringValue(string(s.Protocol))
@@ -629,26 +642,41 @@ func sgPortsToObjectValue(_ context.Context, ports *sdk.Ports) (types.Object, di
 		return types.ObjectNull(sgPortsAttrTypes), nil
 	}
 
-	portList := make([]attr.Value, 0, len(ports.List))
-	for _, p := range ports.List {
-		portList = append(portList, types.Int64Value(int64(p)))
+	listVal := types.ListNull(types.Int64Type)
+	if len(ports.List) > 0 {
+		portList := make([]attr.Value, 0, len(ports.List))
+		for _, p := range ports.List {
+			portList = append(portList, types.Int64Value(int64(p)))
+		}
+
+		var diags diag.Diagnostics
+		listVal, diags = types.ListValue(types.Int64Type, portList)
+		if diags.HasError() {
+			return types.ObjectNull(sgPortsAttrTypes), diags
+		}
 	}
 
-	listVal, diags := types.ListValue(types.Int64Type, portList)
-	if diags.HasError() {
-		return types.ObjectNull(sgPortsAttrTypes), diags
+	// from/to are non-pointer ints with `omitempty`, so an absent bound and the
+	// invalid port 0 arrive identically; a config can only have meant absent.
+	from := types.Int64Null()
+	if ports.From != 0 {
+		from = types.Int64Value(int64(ports.From))
+	}
+	to := types.Int64Null()
+	if ports.To != 0 {
+		to = types.Int64Value(int64(ports.To))
 	}
 
 	return types.ObjectValue(sgPortsAttrTypes, map[string]attr.Value{
-		"from": types.Int64Value(int64(ports.From)),
-		"to":   types.Int64Value(int64(ports.To)),
+		"from": from,
+		"to":   to,
 		"list": listVal,
 	})
 }
 
 func sgRuleRefsToListValue(_ context.Context, refs []sdk.Reference) (types.List, diag.Diagnostics) {
 	if len(refs) == 0 {
-		return types.ListValueMust(types.StringType, []attr.Value{}), nil
+		return types.ListNull(types.StringType), nil
 	}
 
 	elems := make([]attr.Value, 0, len(refs))
@@ -657,4 +685,91 @@ func sgRuleRefsToListValue(_ context.Context, refs []sdk.Reference) (types.List,
 	}
 
 	return types.ListValue(types.StringType, elems)
+}
+
+// sgPreserveRuleShape applies preserveEmptyList to the collections nested
+// inside each rule. Rules are matched by position: the API echoes spec.rules
+// back in the order they were sent, and a length change is a real diff that
+// must reach state as the API reported it.
+func sgPreserveRuleShape(mapped, configured types.List) types.List {
+	if mapped.IsNull() || mapped.IsUnknown() || configured.IsNull() || configured.IsUnknown() {
+		return mapped
+	}
+
+	mappedRules := mapped.Elements()
+	configuredRules := configured.Elements()
+	if len(mappedRules) != len(configuredRules) {
+		return mapped
+	}
+
+	elems := make([]attr.Value, 0, len(mappedRules))
+	for i, elem := range mappedRules {
+		mappedRule, ok := elem.(types.Object)
+		if !ok {
+			return mapped
+		}
+		configuredRule, ok := configuredRules[i].(types.Object)
+		if !ok {
+			return mapped
+		}
+
+		attrs := make(map[string]attr.Value, len(sgRuleAttrTypes))
+		for name, value := range mappedRule.Attributes() {
+			attrs[name] = value
+		}
+		configuredAttrs := configuredRule.Attributes()
+
+		if mappedRefs, ok := attrs["source_refs"].(types.List); ok {
+			if configuredRefs, ok := configuredAttrs["source_refs"].(types.List); ok {
+				attrs["source_refs"] = preserveEmptyList(mappedRefs, configuredRefs)
+			}
+		}
+
+		if mappedPorts, ok := attrs["ports"].(types.Object); ok {
+			if configuredPorts, ok := configuredAttrs["ports"].(types.Object); ok {
+				attrs["ports"] = sgPreservePortsShape(mappedPorts, configuredPorts)
+			}
+		}
+
+		obj, d := types.ObjectValue(sgRuleAttrTypes, attrs)
+		if d.HasError() {
+			return mapped
+		}
+		elems = append(elems, obj)
+	}
+
+	list, d := types.ListValue(types.ObjectType{AttrTypes: sgRuleAttrTypes}, elems)
+	if d.HasError() {
+		return mapped
+	}
+
+	return list
+}
+
+func sgPreservePortsShape(mapped, configured types.Object) types.Object {
+	if mapped.IsNull() || mapped.IsUnknown() || configured.IsNull() || configured.IsUnknown() {
+		return mapped
+	}
+
+	mappedList, ok := mapped.Attributes()["list"].(types.List)
+	if !ok {
+		return mapped
+	}
+	configuredList, ok := configured.Attributes()["list"].(types.List)
+	if !ok {
+		return mapped
+	}
+
+	attrs := make(map[string]attr.Value, len(sgPortsAttrTypes))
+	for name, value := range mapped.Attributes() {
+		attrs[name] = value
+	}
+	attrs["list"] = preserveEmptyList(mappedList, configuredList)
+
+	obj, d := types.ObjectValue(sgPortsAttrTypes, attrs)
+	if d.HasError() {
+		return mapped
+	}
+
+	return obj
 }

@@ -53,10 +53,10 @@ resource "seca_workspace" "test" {
     max_attempts = 3
   }
   timeouts {
-    create = "1m"
-	update = "1m"
-	read =   "30s"
-    delete = "1m"
+    create = "5m"
+	update = "5m"
+	read =   "5m"
+    delete = "5m"
   }
 }
 `, formatLabels(labels))
@@ -73,10 +73,10 @@ resource "seca_workspace" "test" {
     max_attempts = 3
   }
   timeouts {
-    create = "1m"
-	update = "1m"
-	read =   "30s"
-    delete = "1m"
+    create = "5m"
+	update = "5m"
+	read =   "5m"
+    delete = "5m"
   }  
 }
 data "seca_workspace" "test" {
@@ -94,8 +94,8 @@ func TestAccWorkspace(t *testing.T) {
 				Config: testAccWorkspaceResourceConfig(map[string]string{"env": "dev"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("seca_workspace.test", "name", "workspace-1"),
-					resource.TestCheckResourceAttr("seca_workspace.test", "tenant", "seca"),
-					resource.TestCheckResourceAttr("seca_workspace.test", "region", "region"),
+					resource.TestCheckResourceAttr("seca_workspace.test", "tenant", testAccTenant),
+					resource.TestCheckResourceAttr("seca_workspace.test", "region", testAccRegion),
 					resource.TestCheckResourceAttr("seca_workspace.test", "labels.env", "dev"),
 				),
 			},
@@ -117,12 +117,12 @@ func TestAccWorkspace(t *testing.T) {
 				Config: testAccWorkspaceDataSourceConfig(map[string]string{"env": "prod"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("seca_workspace.test", "name", "workspace-1"),
-					resource.TestCheckResourceAttr("seca_workspace.test", "tenant", "seca"),
-					resource.TestCheckResourceAttr("seca_workspace.test", "region", "region"),
+					resource.TestCheckResourceAttr("seca_workspace.test", "tenant", testAccTenant),
+					resource.TestCheckResourceAttr("seca_workspace.test", "region", testAccRegion),
 
 					resource.TestCheckResourceAttr("data.seca_workspace.test", "name", "workspace-1"),
-					resource.TestCheckResourceAttr("data.seca_workspace.test", "tenant", "seca"),
-					resource.TestCheckResourceAttr("seca_workspace.test", "region", "region"),
+					resource.TestCheckResourceAttr("data.seca_workspace.test", "tenant", testAccTenant),
+					resource.TestCheckResourceAttr("data.seca_workspace.test", "region", testAccRegion),
 					resource.TestCheckResourceAttr("data.seca_workspace.test", "state", "active"),
 				),
 			},

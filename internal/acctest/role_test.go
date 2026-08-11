@@ -99,8 +99,9 @@ resource "seca_role" "test" {
     delete = "1m"
   }
 }
+  
 data "seca_role" "test" {
-  name = seca_role.test.name
+  name = "role-1"
 }`
 }
 

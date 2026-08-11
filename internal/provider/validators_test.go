@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -166,5 +167,50 @@ func TestPortRangeValidator_NullUnknown(t *testing.T) {
 
 	resp := &validator.Int64Response{}
 	v.ValidateInt64(context.Background(), validator.Int64Request{Path: path.Root("port"), ConfigValue: types.Int64Null()}, resp)
+	assert.False(t, resp.Diagnostics.HasError())
+}
+
+func stringListValue(t *testing.T, vals ...string) types.List {
+	t.Helper()
+	elems := make([]attr.Value, 0, len(vals))
+	for _, v := range vals {
+		elems = append(elems, types.StringValue(v))
+	}
+	list, diags := types.ListValue(types.StringType, elems)
+	assert.False(t, diags.HasError())
+	return list
+}
+
+func TestListSizeValidator_Valid(t *testing.T) {
+	v := ListSizeValidator(1, 3)
+	cases := [][]string{{"a"}, {"a", "b"}, {"a", "b", "c"}}
+	for _, vals := range cases {
+		req := validator.ListRequest{Path: path.Root("addresses"), ConfigValue: stringListValue(t, vals...)}
+		resp := &validator.ListResponse{}
+		v.ValidateList(context.Background(), req, resp)
+		assert.False(t, resp.Diagnostics.HasError(), "expected %d elements to be valid", len(vals))
+	}
+}
+
+func TestListSizeValidator_Invalid(t *testing.T) {
+	v := ListSizeValidator(1, 2)
+	cases := [][]string{{}, {"a", "b", "c"}}
+	for _, vals := range cases {
+		req := validator.ListRequest{Path: path.Root("addresses"), ConfigValue: stringListValue(t, vals...)}
+		resp := &validator.ListResponse{}
+		v.ValidateList(context.Background(), req, resp)
+		assert.True(t, resp.Diagnostics.HasError(), "expected %d elements to be invalid", len(vals))
+	}
+}
+
+func TestListSizeValidator_NullUnknown(t *testing.T) {
+	v := ListSizeValidator(1, 2)
+
+	resp := &validator.ListResponse{}
+	v.ValidateList(context.Background(), validator.ListRequest{Path: path.Root("addresses"), ConfigValue: types.ListNull(types.StringType)}, resp)
+	assert.False(t, resp.Diagnostics.HasError())
+
+	resp = &validator.ListResponse{}
+	v.ValidateList(context.Background(), validator.ListRequest{Path: path.Root("addresses"), ConfigValue: types.ListUnknown(types.StringType)}, resp)
 	assert.False(t, resp.Diagnostics.HasError())
 }

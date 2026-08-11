@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
@@ -15,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
@@ -46,7 +46,7 @@ func (r *NicResource) Metadata(_ context.Context, req resource.MetadataRequest, 
 }
 
 func (r *NicResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	workspaceID, name, ok := strings.Cut(req.ID, "/")
+	workspaceID, name, ok := cutImportName(req.ID)
 	if !ok || workspaceID == "" || name == "" {
 		resp.Diagnostics.AddError(
 			"Unexpected Import Identifier",
@@ -146,7 +146,8 @@ func (r *NicResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp
 			},
 			"addresses": tfschema.ListAttribute{
 				ElementType: types.StringType,
-				Optional:    true,
+				Required:    true,
+				Validators:  []validator.List{ListSizeValidator(1, 32)},
 				PlanModifiers: []planmodifier.List{
 					listplanmodifier.UseStateForUnknown(),
 				},
@@ -273,8 +274,10 @@ func (r *NicResource) Create(ctx context.Context, req resource.CreateRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.WorkspaceId = data.WorkspaceId
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
+	result.Addresses = preserveEmptyList(result.Addresses, data.Addresses)
 
 	tflog.Info(ctx, "nic created")
 
@@ -293,7 +296,7 @@ func (r *NicResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 
 	wref := secapi.WorkspaceReference{
 		Tenant:    secapi.TenantID(r.tenant),
-		Workspace: secapi.WorkspaceID(data.WorkspaceId.ValueString()),
+		Workspace: secapi.WorkspaceID(workspaceName(data.WorkspaceId.ValueString())),
 		Name:      data.Name.ValueString(),
 	}
 
@@ -315,8 +318,10 @@ func (r *NicResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.WorkspaceId = data.WorkspaceId
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
+	result.Addresses = preserveEmptyList(result.Addresses, data.Addresses)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }
@@ -377,8 +382,10 @@ func (r *NicResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.WorkspaceId = data.WorkspaceId
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
+	result.Addresses = preserveEmptyList(result.Addresses, data.Addresses)
 
 	tflog.Info(ctx, "nic updated")
 
@@ -407,7 +414,7 @@ func (r *NicResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	nic := &sdk.Nic{
 		Metadata: &sdk.RegionalWorkspaceResourceMetadata{
 			Tenant:    r.tenant,
-			Workspace: data.WorkspaceId.ValueString(),
+			Workspace: workspaceName(data.WorkspaceId.ValueString()),
 			Name:      data.Name.ValueString(),
 		},
 	}
@@ -479,7 +486,7 @@ func nicFromModel(ctx context.Context, tenant string, data NicResourceModel) (*s
 	nic := &sdk.Nic{
 		Metadata: &sdk.RegionalWorkspaceResourceMetadata{
 			Tenant:    tenant,
-			Workspace: data.WorkspaceId.ValueString(),
+			Workspace: workspaceName(data.WorkspaceId.ValueString()),
 			Name:      data.Name.ValueString(),
 		},
 		Labels:      toStringMap(data.Labels),
@@ -509,7 +516,7 @@ func nicToResourceModel(ctx context.Context, nic *sdk.Nic) (NicResourceModel, di
 
 func refsToStringList(strs []string) (types.List, diag.Diagnostics) {
 	if len(strs) == 0 {
-		return types.ListValueMust(types.StringType, []attr.Value{}), nil
+		return types.ListNull(types.StringType), nil
 	}
 	elems := make([]attr.Value, 0, len(strs))
 	for _, s := range strs {

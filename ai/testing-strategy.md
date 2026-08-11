@@ -56,8 +56,11 @@ func TestBlockStorageToResourceModel(t *testing.T) {
 **Cluster:** Tests use the provider config in `provider_test.go`, which reads endpoints from environment variables (falling back to `http://localhost:8080/...` defaults). Point the tests at any cluster by setting:
 - `SECA_TEST_REGION_ENDPOINT` — the `seca.region` provider endpoint
 - `SECA_TEST_AUTH_ENDPOINT` — the `seca.authorization` provider endpoint
+- `SECA_TEST_TOKEN`, `SECA_TEST_TENANT`, `SECA_TEST_REGION` — credentials and scope
 
 No source edits are needed to target a different environment.
+
+**Never hardcode environment-derived values in assertions.** Any check whose expected value comes from the cluster identity — `tenant`, `region`, and configs that name a region — must compare against `testAccTenant` / `testAccRegion`, not a literal. Literals only belong to values the test itself supplies (resource names, sizes, SKU names, labels) or that are genuinely fixed by the API.
 
 **Pattern:**
 ```go

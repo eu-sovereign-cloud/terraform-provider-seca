@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
@@ -47,7 +46,7 @@ func (r *NetworkResource) Metadata(_ context.Context, req resource.MetadataReque
 }
 
 func (r *NetworkResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	workspaceID, name, ok := strings.Cut(req.ID, "/")
+	workspaceID, name, ok := cutImportName(req.ID)
 	if !ok || workspaceID == "" || name == "" {
 		resp.Diagnostics.AddError(
 			"Unexpected Import Identifier",
@@ -274,6 +273,7 @@ func (r *NetworkResource) Create(ctx context.Context, req resource.CreateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.WorkspaceId = data.WorkspaceId
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
 
@@ -294,7 +294,7 @@ func (r *NetworkResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	wref := secapi.WorkspaceReference{
 		Tenant:    secapi.TenantID(r.tenant),
-		Workspace: secapi.WorkspaceID(data.WorkspaceId.ValueString()),
+		Workspace: secapi.WorkspaceID(workspaceName(data.WorkspaceId.ValueString())),
 		Name:      data.Name.ValueString(),
 	}
 
@@ -316,6 +316,7 @@ func (r *NetworkResource) Read(ctx context.Context, req resource.ReadRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.WorkspaceId = data.WorkspaceId
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
 
@@ -374,6 +375,7 @@ func (r *NetworkResource) Update(ctx context.Context, req resource.UpdateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.WorkspaceId = data.WorkspaceId
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
 
@@ -404,7 +406,7 @@ func (r *NetworkResource) Delete(ctx context.Context, req resource.DeleteRequest
 	net := &sdk.Network{
 		Metadata: &sdk.RegionalWorkspaceResourceMetadata{
 			Tenant:    r.tenant,
-			Workspace: data.WorkspaceId.ValueString(),
+			Workspace: workspaceName(data.WorkspaceId.ValueString()),
 			Name:      data.Name.ValueString(),
 		},
 	}
@@ -439,10 +441,15 @@ func (r *NetworkResource) Delete(ctx context.Context, req resource.DeleteRequest
 }
 
 func networkFromModel(ctx context.Context, tenant string, data NetworkResourceModel) *sdk.Network {
+	var cidr NetworkCidrModel
+	if data.Cidr != nil {
+		cidr = *data.Cidr
+	}
+
 	net := &sdk.Network{
 		Metadata: &sdk.RegionalWorkspaceResourceMetadata{
 			Tenant:    tenant,
-			Workspace: data.WorkspaceId.ValueString(),
+			Workspace: workspaceName(data.WorkspaceId.ValueString()),
 			Name:      data.Name.ValueString(),
 		},
 		Labels:      toStringMap(data.Labels),
@@ -453,8 +460,8 @@ func networkFromModel(ctx context.Context, tenant string, data NetworkResourceMo
 				Resource: data.SkuId.ValueString(),
 			},
 			Cidr: sdk.Cidr{
-				Ipv4: data.Cidr.Ipv4.ValueString(),
-				Ipv6: data.Cidr.Ipv6.ValueString(),
+				Ipv4: cidr.Ipv4.ValueString(),
+				Ipv6: cidr.Ipv6.ValueString(),
 			},
 		},
 	}

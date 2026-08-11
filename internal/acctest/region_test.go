@@ -1,16 +1,17 @@
 package acctest
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
 func testAccRegionDataSourceConfig() string {
-	return testAccProviderConfig() + `
+	return testAccProviderConfig() + fmt.Sprintf(`
 data "seca_region" "test" {
-  name = "region"
-}`
+  name = %q
+}`, testAccRegion)
 }
 
 func TestAccRegion(t *testing.T) {
@@ -21,7 +22,7 @@ func TestAccRegion(t *testing.T) {
 			{
 				Config: testAccRegionDataSourceConfig(),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.seca_region.test", "name", "region"),
+					resource.TestCheckResourceAttr("data.seca_region.test", "name", testAccRegion),
 					resource.TestCheckResourceAttrSet("data.seca_region.test", "available_zones.#"),
 					resource.TestCheckResourceAttrSet("data.seca_region.test", "providers.#"),
 				),

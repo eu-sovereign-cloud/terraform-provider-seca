@@ -46,32 +46,51 @@ func testAccCheckSubnetDestroy(s *terraform.State) error {
 
 func testAccSubnetResourceConfig(labels map[string]string) string {
 	return testAccProviderConfig() + fmt.Sprintf(`
+data "seca_network_sku" "test" {
+  name = "network-sku-1"
+}
+
 resource "seca_workspace" "test" {
   name = "workspace-1"
 }
+
 resource "seca_network" "test" {
   name         = "network-1"
-  workspace_id = seca_workspace.test.name
+  workspace_id = seca_workspace.test.id
 
-  sku_id = "N10K"
+  sku_id = data.seca_network_sku.test.id
   cidr = {
     ipv4 = "10.0.0.0/16"
   }
 }
+
+resource "seca_internet_gateway" "test" {
+  name         = "internet-gateway-1"
+  workspace_id = seca_workspace.test.id
+}
+
 resource "seca_route_table" "test" {
   name         = "route-table-1"
-  workspace_id = seca_workspace.test.name
-  network_id   = seca_network.test.name
+  workspace_id = seca_workspace.test.id
+  network_id   = seca_network.test.id
+
+  routes = [
+    {
+      destination_cidr_block = "0.0.0.0/0"
+      target_id              = seca_internet_gateway.test.id
+    }
+  ]
 }
+
 resource "seca_subnet" "test" {
   name         = "subnet-1"
-  workspace_id = seca_workspace.test.name
-  network_id   = seca_network.test.name
+  workspace_id = seca_workspace.test.id
+  network_id   = seca_network.test.id
 
   cidr = {
     ipv4 = "10.0.1.0/24"
   }
-  route_table_id = seca_route_table.test.name
+  route_table_id = seca_route_table.test.id
   zone           = "zone-a"
   labels         = %s
   retry = {
@@ -91,32 +110,51 @@ resource "seca_subnet" "test" {
 
 func testAccSubnetUpdateConfig(labels map[string]string) string {
 	return testAccProviderConfig() + fmt.Sprintf(`
+data "seca_network_sku" "test" {
+  name = "network-sku-1"
+}
+
 resource "seca_workspace" "test" {
   name = "workspace-1"
 }
+
 resource "seca_network" "test" {
   name         = "network-1"
-  workspace_id = seca_workspace.test.name
+  workspace_id = seca_workspace.test.id
 
-  sku_id = "N10K"
+  sku_id = data.seca_network_sku.test.id
   cidr = {
     ipv4 = "10.0.0.0/16"
   }
 }
+
+resource "seca_internet_gateway" "test" {
+  name         = "internet-gateway-1"
+  workspace_id = seca_workspace.test.id
+}
+
 resource "seca_route_table" "test" {
   name         = "route-table-1"
-  workspace_id = seca_workspace.test.name
-  network_id   = seca_network.test.name
+  workspace_id = seca_workspace.test.id
+  network_id   = seca_network.test.id
+
+  routes = [
+    {
+      destination_cidr_block = "0.0.0.0/0"
+      target_id              = seca_internet_gateway.test.id
+    }
+  ]
 }
+
 resource "seca_subnet" "test" {
   name         = "subnet-1"
-  workspace_id = seca_workspace.test.name
-  network_id   = seca_network.test.name
+  workspace_id = seca_workspace.test.id
+  network_id   = seca_network.test.id
 
   cidr = {
     ipv4 = "10.0.1.0/24"
   }
-  route_table_id = seca_route_table.test.name
+  route_table_id = seca_route_table.test.id
   zone           = "zone-a"
   labels         = %s
   retry = {
@@ -136,32 +174,51 @@ resource "seca_subnet" "test" {
 
 func testAccSubnetDataSourceConfig(labels map[string]string) string {
 	return testAccProviderConfig() + fmt.Sprintf(`
+data "seca_network_sku" "test" {
+  name = "network-sku-1"
+}
+
 resource "seca_workspace" "test" {
   name = "workspace-1"
 }
+
 resource "seca_network" "test" {
   name         = "network-1"
-  workspace_id = seca_workspace.test.name
+  workspace_id = seca_workspace.test.id
 
-  sku_id = "N10K"
+  sku_id = data.seca_network_sku.test.id
   cidr = {
     ipv4 = "10.0.0.0/16"
   }
 }
+
+resource "seca_internet_gateway" "test" {
+  name         = "internet-gateway-1"
+  workspace_id = seca_workspace.test.id
+}
+
 resource "seca_route_table" "test" {
   name         = "route-table-1"
-  workspace_id = seca_workspace.test.name
-  network_id   = seca_network.test.name
+  workspace_id = seca_workspace.test.id
+  network_id   = seca_network.test.id
+
+  routes = [
+    {
+      destination_cidr_block = "0.0.0.0/0"
+      target_id              = seca_internet_gateway.test.id
+    }
+  ]
 }
+
 resource "seca_subnet" "test" {
   name         = "subnet-1"
-  workspace_id = seca_workspace.test.name
-  network_id   = seca_network.test.name
+  workspace_id = seca_workspace.test.id
+  network_id   = seca_network.test.id
 
   cidr = {
     ipv4 = "10.0.1.0/24"
   }
-  route_table_id = seca_route_table.test.name
+  route_table_id = seca_route_table.test.id
   zone           = "zone-a"
   labels         = %s
   retry = {
@@ -176,10 +233,11 @@ resource "seca_subnet" "test" {
     delete = "1m"
   }
 }
+
 data "seca_subnet" "test" {
   name         = "subnet-1"
-  workspace_id = seca_workspace.test.name
-  network_id   = seca_network.test.name
+  workspace_id = seca_workspace.test.id
+  network_id   = seca_network.test.id
 }`, formatLabels(labels))
 }
 
@@ -193,12 +251,12 @@ func TestAccSubnet(t *testing.T) {
 				Config: testAccSubnetResourceConfig(map[string]string{"env": "dev"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("seca_subnet.test", "name", "subnet-1"),
-					resource.TestCheckResourceAttr("seca_subnet.test", "workspace_id", "workspace-1"),
-					resource.TestCheckResourceAttr("seca_subnet.test", "network_id", "network-1"),
+					resource.TestCheckResourceAttr("seca_subnet.test", "workspace_id", urnWorkspace("workspace-1")),
+					resource.TestCheckResourceAttr("seca_subnet.test", "network_id", urnNetwork("workspace-1", "network-1")),
 					resource.TestCheckResourceAttr("seca_subnet.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("seca_subnet.test", "region", testAccRegion),
 					resource.TestCheckResourceAttr("seca_subnet.test", "cidr.ipv4", "10.0.1.0/24"),
-					resource.TestCheckResourceAttr("seca_subnet.test", "route_table_id", "route-table-1"),
+					resource.TestCheckResourceAttr("seca_subnet.test", "route_table_id", urnRouteTable("workspace-1", "network-1", "route-table-1")),
 					resource.TestCheckResourceAttr("seca_subnet.test", "labels.env", "dev"),
 				),
 			},
@@ -213,20 +271,20 @@ func TestAccSubnet(t *testing.T) {
 				ResourceName:            "seca_subnet.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateId:           "workspace-1/network-1/subnet-1",
+				ImportStateId:           urnWorkspace("workspace-1") + "/" + urnNetwork("workspace-1", "network-1") + "/subnet-1",
 				ImportStateVerifyIgnore: []string{"retry"},
 			},
 			{
 				Config: testAccSubnetDataSourceConfig(map[string]string{"env": "prod"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("seca_subnet.test", "name", "subnet-1"),
-					resource.TestCheckResourceAttr("seca_subnet.test", "workspace_id", "workspace-1"),
-					resource.TestCheckResourceAttr("seca_subnet.test", "network_id", "network-1"),
+					resource.TestCheckResourceAttr("seca_subnet.test", "workspace_id", urnWorkspace("workspace-1")),
+					resource.TestCheckResourceAttr("seca_subnet.test", "network_id", urnNetwork("workspace-1", "network-1")),
 					resource.TestCheckResourceAttr("seca_subnet.test", "cidr.ipv4", "10.0.1.0/24"),
 
 					resource.TestCheckResourceAttr("data.seca_subnet.test", "name", "subnet-1"),
-					resource.TestCheckResourceAttr("data.seca_subnet.test", "workspace_id", "workspace-1"),
-					resource.TestCheckResourceAttr("data.seca_subnet.test", "network_id", "network-1"),
+					resource.TestCheckResourceAttr("data.seca_subnet.test", "workspace_id", urnWorkspace("workspace-1")),
+					resource.TestCheckResourceAttr("data.seca_subnet.test", "network_id", urnNetwork("workspace-1", "network-1")),
 					resource.TestCheckResourceAttr("data.seca_subnet.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("data.seca_subnet.test", "region", testAccRegion),
 					resource.TestCheckResourceAttr("data.seca_subnet.test", "cidr.ipv4", "10.0.1.0/24"),

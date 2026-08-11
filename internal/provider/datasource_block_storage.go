@@ -132,7 +132,7 @@ func (d *BlockStorageDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	wref := secapi.WorkspaceReference{
 		Tenant:    secapi.TenantID(d.tenant),
-		Workspace: secapi.WorkspaceID(data.WorkspaceId.ValueString()),
+		Workspace: secapi.WorkspaceID(workspaceName(data.WorkspaceId.ValueString())),
 		Name:      data.Name.ValueString(),
 	}
 
@@ -145,13 +145,15 @@ func (d *BlockStorageDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	data, diags := blockStorageToDataSourceModel(ctx, block)
+	result, diags := blockStorageToDataSourceModel(ctx, block)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	result.WorkspaceId = data.WorkspaceId
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }
 
 func blockStorageToDataSourceModel(ctx context.Context, block *sdk.BlockStorage) (BlockStorageDataSourceModel, diag.Diagnostics) {
