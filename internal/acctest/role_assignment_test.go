@@ -45,7 +45,7 @@ func testAccCheckRoleAssignmentDestroy(s *terraform.State) error {
 func testAccRoleAssignmentResourceConfig(subs, roles string) string {
 	return testAccProviderConfig() + fmt.Sprintf(`
 resource "seca_role" "test" {
-  name = "role-1"
+  name = %q
 
   permissions = [
     {
@@ -57,9 +57,9 @@ resource "seca_role" "test" {
 }
 
 resource "seca_role_assignment" "test" {
-  name  = "ra-1"
+  name  = %q
   subs  = [%s]
-  roles = ["role-1"]
+  roles = [%q]
 
   scopes = [
     {
@@ -79,13 +79,13 @@ resource "seca_role_assignment" "test" {
     delete = "1m"
   }
 }
-`, subs, roles)
+`, testAccRoleName, testAccRoleAssignmentName, subs, testAccRoleName, roles)
 }
 
 func testAccRoleAssignmentDataSourceConfig() string {
 	return testAccProviderConfig() + fmt.Sprintf(`
 resource "seca_role" "test" {
-  name = "role-1"
+  name = %q
 
   permissions = [
     {
@@ -97,9 +97,9 @@ resource "seca_role" "test" {
 }
 
 resource "seca_role_assignment" "test" {
-  name  = "ra-1"
+  name  = %q
   subs  = [%q]
-  roles = ["role-1"]
+  roles = [%q]
 
   scopes = [
     {
@@ -121,8 +121,8 @@ resource "seca_role_assignment" "test" {
 }
 
 data "seca_role_assignment" "test" {
-  name =  "ra-1"
-}`, "sa-1", testAccTenant)
+  name =  %q
+}`, testAccRoleName, testAccRoleAssignmentName, "sa-1", testAccRoleName, testAccTenant, testAccRoleAssignmentName)
 }
 
 func TestAccRoleAssignment(t *testing.T) {
@@ -134,7 +134,7 @@ func TestAccRoleAssignment(t *testing.T) {
 			{
 				Config: testAccRoleAssignmentResourceConfig(fmt.Sprintf("%q", "sa-1"), fmt.Sprintf("%q", testAccTenant)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("seca_role_assignment.test", "name", "ra-1"),
+					resource.TestCheckResourceAttr("seca_role_assignment.test", "name", testAccRoleAssignmentName),
 					resource.TestCheckResourceAttr("seca_role_assignment.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("seca_role_assignment.test", "subs.#", "1"),
 					resource.TestCheckResourceAttr("seca_role_assignment.test", "subs.0", "sa-1"),
@@ -154,15 +154,15 @@ func TestAccRoleAssignment(t *testing.T) {
 				ResourceName:            "seca_role_assignment.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateId:           "ra-1",
+				ImportStateId:           testAccRoleAssignmentName,
 				ImportStateVerifyIgnore: []string{"retry"},
 			},
 			{
 				Config: testAccRoleAssignmentDataSourceConfig(),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("seca_role_assignment.test", "name", "ra-1"),
+					resource.TestCheckResourceAttr("seca_role_assignment.test", "name", testAccRoleAssignmentName),
 
-					resource.TestCheckResourceAttr("data.seca_role_assignment.test", "name", "ra-1"),
+					resource.TestCheckResourceAttr("data.seca_role_assignment.test", "name", testAccRoleAssignmentName),
 					resource.TestCheckResourceAttr("data.seca_role_assignment.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("data.seca_role_assignment.test", "state", "active"),
 					resource.TestCheckResourceAttr("data.seca_role_assignment.test", "subs.#", "2"),

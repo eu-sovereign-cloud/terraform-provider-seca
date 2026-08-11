@@ -45,20 +45,20 @@ func testAccCheckImageDestroy(s *terraform.State) error {
 func testAccImageResourceConfig(labels map[string]string) string {
 	return testAccProviderConfig() + fmt.Sprintf(`
 data "seca_storage_sku" "test" {
-  name = "sku-1"
+  name = %q
 }
 resource "seca_workspace" "test" {
-  name = "workspace-1"
+  name = %q
 }
 resource "seca_block_storage" "test" {
-  name         = "block-storage-1"
+  name         = %q
   workspace_id = seca_workspace.test.id
 
   size_gb = 10
   sku_id  = data.seca_storage_sku.test.id
 }
 resource "seca_image" "test" {
-  name = "image-1"
+  name = %q
 
   block_storage_id = seca_block_storage.test.id
   cpu_architecture = "amd64"
@@ -77,26 +77,26 @@ resource "seca_image" "test" {
     delete = "1m"
   }
 }
-`, formatLabels(labels))
+`, testAccStorageSku, testAccWorkspaceName, testAccBlockStorageName, testAccImageName, formatLabels(labels))
 }
 
 func testAccImageDataSourceConfig(labels map[string]string) string {
 	return testAccProviderConfig() + fmt.Sprintf(`
 data "seca_storage_sku" "test" {
-  name = "sku-1"
+  name = %q
 }
 resource "seca_workspace" "test" {
-  name = "workspace-1"
+  name = %q
 }
 resource "seca_block_storage" "test" {
-  name         = "block-storage-1"
+  name         = %q
   workspace_id = seca_workspace.test.id
 
   size_gb = 10
   sku_id  = data.seca_storage_sku.test.id
 }
 resource "seca_image" "test" {
-  name = "image-1"
+  name = %q
 
   block_storage_id = seca_block_storage.test.id
   cpu_architecture = "amd64"
@@ -116,8 +116,8 @@ resource "seca_image" "test" {
   }
 }
 data "seca_image" "test" {
-  name = "image-1"
-}`, formatLabels(labels))
+  name = %q
+}`, testAccStorageSku, testAccWorkspaceName, testAccBlockStorageName, testAccImageName, formatLabels(labels), testAccImageName)
 }
 
 func TestAccImage(t *testing.T) {
@@ -129,7 +129,7 @@ func TestAccImage(t *testing.T) {
 			{
 				Config: testAccImageResourceConfig(map[string]string{"env": "dev"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("seca_image.test", "name", "image-1"),
+					resource.TestCheckResourceAttr("seca_image.test", "name", testAccImageName),
 					resource.TestCheckResourceAttr("seca_image.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("seca_image.test", "region", testAccRegion),
 					resource.TestCheckResourceAttr("seca_image.test", "cpu_architecture", "amd64"),
@@ -141,7 +141,7 @@ func TestAccImage(t *testing.T) {
 			{
 				Config: testAccImageResourceConfig(map[string]string{"env": "prod"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("seca_image.test", "name", "image-1"),
+					resource.TestCheckResourceAttr("seca_image.test", "name", testAccImageName),
 					resource.TestCheckResourceAttr("seca_image.test", "labels.env", "prod"),
 				),
 			},
@@ -149,17 +149,17 @@ func TestAccImage(t *testing.T) {
 				ResourceName:            "seca_image.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateId:           "image-1",
+				ImportStateId:           testAccImageName,
 				ImportStateVerifyIgnore: []string{"retry"},
 			},
 			{
 				Config: testAccImageDataSourceConfig(map[string]string{"env": "prod"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("seca_image.test", "name", "image-1"),
+					resource.TestCheckResourceAttr("seca_image.test", "name", testAccImageName),
 					resource.TestCheckResourceAttr("seca_image.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("seca_image.test", "region", testAccRegion),
 
-					resource.TestCheckResourceAttr("data.seca_image.test", "name", "image-1"),
+					resource.TestCheckResourceAttr("data.seca_image.test", "name", testAccImageName),
 					resource.TestCheckResourceAttr("data.seca_image.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("data.seca_image.test", "region", testAccRegion),
 					resource.TestCheckResourceAttr("data.seca_image.test", "cpu_architecture", "amd64"),

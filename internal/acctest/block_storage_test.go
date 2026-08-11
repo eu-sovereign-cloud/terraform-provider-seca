@@ -47,13 +47,13 @@ func testAccCheckBlockStorageDestroy(s *terraform.State) error {
 func testAccBlockStorageResourceConfig(labels map[string]string) string {
 	return testAccProviderConfig() + fmt.Sprintf(`
 data "seca_storage_sku" "test" {
-  name = "sku-1"
+  name = %q
 }
 resource "seca_workspace" "test" {
-  name = "workspace-1"
+  name = %q
 }
 resource "seca_block_storage" "test" {
-  name         = "block-storage-1"
+  name         = %q
   workspace_id = seca_workspace.test.id
 
   size_gb = 10
@@ -71,19 +71,19 @@ resource "seca_block_storage" "test" {
     delete = "1m"
   }
 }
-`, formatLabels(labels))
+`, testAccStorageSku, testAccWorkspaceName, testAccBlockStorageName, formatLabels(labels))
 }
 
 func testAccBlockStorageDataSourceConfig(labels map[string]string) string {
 	return testAccProviderConfig() + fmt.Sprintf(`
 data "seca_storage_sku" "test" {
-  name = "sku-1"
+  name = %q
 }
 resource "seca_workspace" "test" {
-  name = "workspace-1"
+  name = %q
 }
 resource "seca_block_storage" "test" {
-  name         = "block-storage-1"
+  name         = %q
   workspace_id = seca_workspace.test.id
 
   size_gb = 10
@@ -102,15 +102,15 @@ resource "seca_block_storage" "test" {
   }
 }
 data "seca_block_storage" "test" {
-  name         = "block-storage-1"
+  name         = %q
   workspace_id = seca_workspace.test.id
-}`, formatLabels(labels))
+}`, testAccStorageSku, testAccWorkspaceName, testAccBlockStorageName, formatLabels(labels), testAccBlockStorageName)
 }
 
 func testAccBlockStorageInvalidSKUConfig() string {
-	return testAccProviderConfig() + `
+	return testAccProviderConfig() + fmt.Sprintf(`
 resource "seca_workspace" "test" {
-  name = "workspace-neg-1"
+  name = %q
 }
 resource "seca_block_storage" "invalid_sku" {
   name         = "bs-invalid-sku"
@@ -118,18 +118,18 @@ resource "seca_block_storage" "invalid_sku" {
 
   size_gb = 10
   sku_id  = "storage-skus/DOES-NOT-EXIST-XYZ"
-}`
+}`, testAccWorkspaceNegName)
 }
 
 func testAccBlockStorageMissingWorkspaceConfig() string {
-	return testAccProviderConfig() + `
+	return testAccProviderConfig() + fmt.Sprintf(`
 resource "seca_block_storage" "missing_ws" {
   name         = "bs-missing-ws"
   workspace_id = "workspace-does-not-exist"
 
   size_gb = 10
-  sku_id  = "storage-skus/RD500"
-}`
+  sku_id  = %q
+}`, urnStorageSku(testAccStorageSku))
 }
 
 func TestAccBlockStorage(t *testing.T) {
@@ -141,8 +141,8 @@ func TestAccBlockStorage(t *testing.T) {
 			{
 				Config: testAccBlockStorageResourceConfig(map[string]string{"env": "dev"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("seca_block_storage.test", "name", "block-storage-1"),
-					resource.TestCheckResourceAttr("seca_block_storage.test", "workspace_id", urnWorkspace("workspace-1")),
+					resource.TestCheckResourceAttr("seca_block_storage.test", "name", testAccBlockStorageName),
+					resource.TestCheckResourceAttr("seca_block_storage.test", "workspace_id", urnWorkspace(testAccWorkspaceName)),
 					resource.TestCheckResourceAttr("seca_block_storage.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("seca_block_storage.test", "region", testAccRegion),
 					resource.TestCheckResourceAttr("seca_block_storage.test", "size_gb", "10"),
@@ -152,7 +152,7 @@ func TestAccBlockStorage(t *testing.T) {
 			{
 				Config: testAccBlockStorageResourceConfig(map[string]string{"env": "prod"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("seca_block_storage.test", "name", "block-storage-1"),
+					resource.TestCheckResourceAttr("seca_block_storage.test", "name", testAccBlockStorageName),
 					resource.TestCheckResourceAttr("seca_block_storage.test", "labels.env", "prod"),
 				),
 			},
@@ -160,19 +160,19 @@ func TestAccBlockStorage(t *testing.T) {
 				ResourceName:            "seca_block_storage.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateId:           urnWorkspace("workspace-1") + "/block-storage-1",
+				ImportStateId:           urnWorkspace(testAccWorkspaceName) + "/" + testAccBlockStorageName,
 				ImportStateVerifyIgnore: []string{"retry"},
 			},
 			{
 				Config: testAccBlockStorageDataSourceConfig(map[string]string{"env": "prod"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("seca_block_storage.test", "name", "block-storage-1"),
-					resource.TestCheckResourceAttr("seca_block_storage.test", "workspace_id", urnWorkspace("workspace-1")),
+					resource.TestCheckResourceAttr("seca_block_storage.test", "name", testAccBlockStorageName),
+					resource.TestCheckResourceAttr("seca_block_storage.test", "workspace_id", urnWorkspace(testAccWorkspaceName)),
 					resource.TestCheckResourceAttr("seca_block_storage.test", "size_gb", "10"),
 					resource.TestCheckResourceAttr("seca_block_storage.test", "labels.env", "prod"),
 
-					resource.TestCheckResourceAttr("data.seca_block_storage.test", "name", "block-storage-1"),
-					resource.TestCheckResourceAttr("data.seca_block_storage.test", "workspace_id", urnWorkspace("workspace-1")),
+					resource.TestCheckResourceAttr("data.seca_block_storage.test", "name", testAccBlockStorageName),
+					resource.TestCheckResourceAttr("data.seca_block_storage.test", "workspace_id", urnWorkspace(testAccWorkspaceName)),
 					resource.TestCheckResourceAttr("data.seca_block_storage.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("data.seca_block_storage.test", "region", testAccRegion),
 					resource.TestCheckResourceAttr("data.seca_block_storage.test", "size_gb", "10"),

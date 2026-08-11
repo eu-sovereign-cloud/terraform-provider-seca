@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/eu-sovereign-cloud/terraform-provider-seca/internal/provider"
 
@@ -22,6 +24,35 @@ var (
 	testAccRegion       = getEnvDefault("SECA_TEST_REGION", "region-1")
 	testAccEndpointReg  = getEnvDefault("SECA_TEST_REGION_ENDPOINT", "http://localhost:8080/providers/seca.region")
 	testAccEndpointAuth = getEnvDefault("SECA_TEST_AUTH_ENDPOINT", "http://localhost:8080/providers/seca.authorization")
+	testAccStorageSku   = getEnvDefault("SECA_TEST_STORAGE_SKU", "sku-1")
+	testAccInstanceSku  = getEnvDefault("SECA_TEST_INSTANCE_SKU", "sku-1")
+	testAccNetworkSku   = getEnvDefault("SECA_TEST_NETWORK_SKU", "sku-1")
+)
+
+// testAccRunID makes every resource name unique to a single test run, so a run
+// never collides with resources an earlier run left behind on the environment.
+var testAccRunID = strconv.FormatInt(time.Now().UnixMilli(), 10)
+
+func testAccResourceName(prefix string) string {
+	return prefix + "-" + testAccRunID
+}
+
+var (
+	testAccWorkspaceName       = testAccResourceName("workspace")
+	testAccWorkspaceNegName    = testAccResourceName("workspace-neg")
+	testAccNetworkName         = testAccResourceName("network")
+	testAccSubnetName          = testAccResourceName("subnet")
+	testAccRouteTableName      = testAccResourceName("route-table")
+	testAccInternetGatewayName = testAccResourceName("internet-gateway")
+	testAccBlockStorageName    = testAccResourceName("block-storage")
+	testAccBootVolumeName      = testAccResourceName("boot-vol")
+	testAccInstanceName        = testAccResourceName("instance")
+	testAccNicName             = testAccResourceName("nic")
+	testAccPublicIPName        = testAccResourceName("public-ip")
+	testAccSecurityGroupName   = testAccResourceName("security-group")
+	testAccImageName           = testAccResourceName("image")
+	testAccRoleName            = testAccResourceName("role")
+	testAccRoleAssignmentName  = testAccResourceName("ra")
 )
 
 var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
@@ -125,4 +156,8 @@ func urnBlockStorage(workspace, name string) string {
 
 func urnNetworkSku(name string) string {
 	return urnTenantScoped("seca.network/v1", "skus", name)
+}
+
+func urnStorageSku(name string) string {
+	return urnTenantScoped("seca.storage/v1", "storage-skus", name)
 }

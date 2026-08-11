@@ -45,7 +45,7 @@ func testAccCheckWorkspaceDestroy(s *terraform.State) error {
 func testAccWorkspaceResourceConfig(labels map[string]string) string {
 	return testAccProviderConfig() + fmt.Sprintf(`
 resource "seca_workspace" "test" {
-  name   = "workspace-1"
+  name   = %q
   labels = %s
   retry = {
     delay        = 10
@@ -59,13 +59,13 @@ resource "seca_workspace" "test" {
     delete = "5m"
   }
 }
-`, formatLabels(labels))
+`, testAccWorkspaceName, formatLabels(labels))
 }
 
 func testAccWorkspaceDataSourceConfig(labels map[string]string) string {
 	return testAccProviderConfig() + fmt.Sprintf(`
 resource "seca_workspace" "test" {
-  name   = "workspace-1"
+  name   = %q
   labels = %s
   retry = {
     delay        = 10
@@ -80,8 +80,8 @@ resource "seca_workspace" "test" {
   }  
 }
 data "seca_workspace" "test" {
-  name = "workspace-1"
-}`, formatLabels(labels))
+  name = %q
+}`, testAccWorkspaceName, formatLabels(labels), testAccWorkspaceName)
 }
 
 func TestAccWorkspace(t *testing.T) {
@@ -93,7 +93,7 @@ func TestAccWorkspace(t *testing.T) {
 			{
 				Config: testAccWorkspaceResourceConfig(map[string]string{"env": "dev"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("seca_workspace.test", "name", "workspace-1"),
+					resource.TestCheckResourceAttr("seca_workspace.test", "name", testAccWorkspaceName),
 					resource.TestCheckResourceAttr("seca_workspace.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("seca_workspace.test", "region", testAccRegion),
 					resource.TestCheckResourceAttr("seca_workspace.test", "labels.env", "dev"),
@@ -102,7 +102,7 @@ func TestAccWorkspace(t *testing.T) {
 			{
 				Config: testAccWorkspaceResourceConfig(map[string]string{"env": "prod"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("seca_workspace.test", "name", "workspace-1"),
+					resource.TestCheckResourceAttr("seca_workspace.test", "name", testAccWorkspaceName),
 					resource.TestCheckResourceAttr("seca_workspace.test", "labels.env", "prod"),
 				),
 			},
@@ -110,17 +110,17 @@ func TestAccWorkspace(t *testing.T) {
 				ResourceName:            "seca_workspace.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateId:           "workspace-1",
+				ImportStateId:           testAccWorkspaceName,
 				ImportStateVerifyIgnore: []string{"retry"},
 			},
 			{
 				Config: testAccWorkspaceDataSourceConfig(map[string]string{"env": "prod"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("seca_workspace.test", "name", "workspace-1"),
+					resource.TestCheckResourceAttr("seca_workspace.test", "name", testAccWorkspaceName),
 					resource.TestCheckResourceAttr("seca_workspace.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("seca_workspace.test", "region", testAccRegion),
 
-					resource.TestCheckResourceAttr("data.seca_workspace.test", "name", "workspace-1"),
+					resource.TestCheckResourceAttr("data.seca_workspace.test", "name", testAccWorkspaceName),
 					resource.TestCheckResourceAttr("data.seca_workspace.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("data.seca_workspace.test", "region", testAccRegion),
 					resource.TestCheckResourceAttr("data.seca_workspace.test", "state", "active"),

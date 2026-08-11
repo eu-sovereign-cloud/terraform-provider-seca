@@ -57,10 +57,36 @@ func TestBlockStorageToResourceModel(t *testing.T) {
 - `SECA_TEST_REGION_ENDPOINT` — the `seca.region` provider endpoint
 - `SECA_TEST_AUTH_ENDPOINT` — the `seca.authorization` provider endpoint
 - `SECA_TEST_TOKEN`, `SECA_TEST_TENANT`, `SECA_TEST_REGION` — credentials and scope
+- `SECA_TEST_STORAGE_SKU`, `SECA_TEST_INSTANCE_SKU`, `SECA_TEST_NETWORK_SKU` — the SKU names the tests reference, exposed as `testAccStorageSku` / `testAccInstanceSku` / `testAccNetworkSku`
 
 No source edits are needed to target a different environment.
 
-**Never hardcode environment-derived values in assertions.** Any check whose expected value comes from the cluster identity — `tenant`, `region`, and configs that name a region — must compare against `testAccTenant` / `testAccRegion`, not a literal. Literals only belong to values the test itself supplies (resource names, sizes, SKU names, labels) or that are genuinely fixed by the API.
+**Never hardcode environment-derived values in assertions.** Any check whose expected value comes from the cluster identity — `tenant`, `region`, SKU names, and configs that name a region — must compare against `testAccTenant` / `testAccRegion` / `testAccStorageSku` and friends, not a literal. SKU catalogs differ per environment, so a config that names a SKU must interpolate the variable:
+
+```go
+return testAccProviderConfig() + fmt.Sprintf(`
+data "seca_storage_sku" "test" {
+  name = %q
+}
+...
+`, testAccStorageSku, formatLabels(labels))
+```
+
+Literals only belong to values the test itself supplies (sizes, labels) or that are genuinely fixed by the API.
+
+**Never hardcode resource names either.** Every name a test creates carries a per-run suffix (`testAccRunID`, the run's Unix time in milliseconds) so a run cannot collide with resources an earlier run left behind on a shared environment. `provider_test.go` declares one variable per resource kind — `testAccWorkspaceName`, `testAccNetworkName`, `testAccSubnetName`, … — built by `testAccResourceName(prefix)`. Use them in configs, assertions, `ImportStateId`, and the `urn*` helpers:
+
+```go
+resource "seca_workspace" "test" {
+  name = %q
+}
+`, testAccWorkspaceName, ...)
+
+resource.TestCheckResourceAttr("seca_network.test", "workspace_id", urnWorkspace(testAccWorkspaceName)),
+ImportStateId: urnWorkspace(testAccWorkspaceName) + "/" + testAccNetworkName,
+```
+
+The variables are package-level, so a name is stable across every step of a run — never generate a name inside a config function, or step 2 would target a different resource than step 1. A new resource kind needs a new `testAccResourceName` variable rather than a literal.
 
 **Pattern:**
 ```go
