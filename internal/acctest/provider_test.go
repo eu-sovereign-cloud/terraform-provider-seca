@@ -91,3 +91,38 @@ func formatLabels(labels map[string]string) string {
 	b.WriteString("  }")
 	return b.String()
 }
+
+// The `id` attribute, and every reference attribute that carries it, always holds the
+// full URN — `{provider}/{version}/tenants/{tenant}[/workspaces/{workspace}[/…]]/{type}/{name}`
+
+func urnTenantScoped(provider, kind, name string) string {
+	return fmt.Sprintf("%s/tenants/%s/%s/%s", provider, testAccTenant, kind, name)
+}
+
+func urnWorkspaceScoped(provider, workspace, kind, name string) string {
+	return fmt.Sprintf("%s/tenants/%s/workspaces/%s/%s/%s", provider, testAccTenant, workspace, kind, name)
+}
+
+func urnWorkspace(name string) string {
+	return urnTenantScoped("seca.workspace/v1", "workspaces", name)
+}
+
+func urnNetwork(workspace, name string) string {
+	return urnWorkspaceScoped("seca.network/v1", workspace, "networks", name)
+}
+
+func urnSubnet(workspace, network, name string) string {
+	return urnNetwork(workspace, network) + "/subnets/" + name
+}
+
+func urnRouteTable(workspace, network, name string) string {
+	return urnNetwork(workspace, network) + "/route-tables/" + name
+}
+
+func urnBlockStorage(workspace, name string) string {
+	return urnWorkspaceScoped("seca.storage/v1", workspace, "block-storages", name)
+}
+
+func urnNetworkSku(name string) string {
+	return urnTenantScoped("seca.network/v1", "skus", name)
+}

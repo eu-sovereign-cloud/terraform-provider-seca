@@ -47,6 +47,24 @@ func fromStringMap(ctx context.Context, m map[string]string) (types.Map, diag.Di
 	return types.MapValueFrom(ctx, types.StringType, m)
 }
 
+// preserveEmptyList keeps the configured representation of a semantically empty
+// list. An Optional-only attribute has to hold exactly the config value in state
+// after apply, but the SDK spec fields backing these lists are `omitempty`,
+// which collapses `[]` and an omitted attribute into the same wire form. The
+// mappers read both back as null, so a config that wrote `[]` would otherwise
+// fail with "Provider produced inconsistent result after apply".
+//
+// Only values that are already empty on both sides are substituted — real drift
+// reaches state as the API reported it. Call it from Create/Read/Update
+// alongside the other config restores (`result.Retry = data.Retry`).
+func preserveEmptyList(mapped, configured types.List) types.List {
+	if configured.IsUnknown() || len(mapped.Elements()) > 0 || len(configured.Elements()) > 0 {
+		return mapped
+	}
+
+	return configured
+}
+
 func fromTime(t time.Time) types.String {
 	if t.IsZero() {
 		return types.StringNull()
@@ -80,6 +98,87 @@ func refToResourceProvider(ref string) types.String {
 		return types.StringValue(ref)
 	}
 	return types.StringValue(parts[0] + "/" + parts[1])
+}
+
+// urnName extracts the name of the resource held in the given URN collection
+// segment, e.g. urnName("seca.workspace/v1/tenants/t1/workspaces/w1", "workspaces")
+// returns "w1". A value that is already a bare name is returned unchanged.
+//
+// Reference attributes (workspace_id, network_id, …) accept either form: a config
+// may point them at a sibling resource's `id` — which always carries the full URN
+// — or at its `name`. The SECA API takes these identifiers as single URL path
+// segments (and as `Metadata.Workspace` / `Metadata.Network`, both capped at 64
+// characters), so they must be reduced to the bare name before reaching the SDK.
+func urnName(id string, collection string) string {
+	_, after, found := strings.Cut(id, "/"+collection+"/")
+	if !found {
+		return id
+	}
+	name, _, _ := strings.Cut(after, "/")
+	return name
+}
+
+// workspaceName reduces a workspace_id attribute value to the bare workspace name.
+func workspaceName(id string) string {
+	return urnName(id, "workspaces")
+}
+
+// networkName reduces a network_id attribute value to the bare network name.
+func networkName(id string) string {
+	return urnName(id, "networks")
+}
+
+// urnStart returns the index at which the URN that ends s begins, or -1 when s
+// does not end in a URN. A URN is "{provider}/{version}/tenants/{tenant}/…", so
+// the last "/tenants/" marks its third segment and the provider and version
+// segments precede it.
+func urnStart(s string) int {
+	tenants := strings.LastIndex(s, "/tenants/")
+	if tenants < 0 {
+		return -1
+	}
+	version := strings.LastIndex(s[:tenants], "/")
+	if version < 0 {
+		return -1
+	}
+	return strings.LastIndex(s[:version], "/") + 1
+}
+
+// cutImportName splits the resource name off the right of a composite import
+// identifier. Names never contain "/", so the name is always the last segment;
+// what precedes it is the scope, which may itself be a URN.
+func cutImportName(id string) (scope string, name string, ok bool) {
+	i := strings.LastIndex(id, "/")
+	if i <= 0 || i == len(id)-1 {
+		return "", "", false
+	}
+	return id[:i], id[i+1:], true
+}
+
+// cutImportScope splits the trailing scope identifier off a composite import
+// identifier, e.g. the network_id out of "<workspace_id>/<network_id>". The
+// scope may be written as a bare name or as a full URN ending in
+// "{collection}/{name}" — the latter contains "/" itself, so the identifier
+// cannot simply be split on every "/".
+func cutImportScope(id string, collection string) (prefix string, scopeID string, ok bool) {
+	segments := strings.Split(id, "/")
+	if len(segments) < 2 {
+		return "", "", false
+	}
+
+	if segments[len(segments)-2] == collection {
+		start := urnStart(id)
+		if start <= 0 {
+			return "", "", false
+		}
+		return id[:start-1], id[start:], true
+	}
+
+	i := strings.LastIndex(id, "/")
+	if i <= 0 || i == len(id)-1 {
+		return "", "", false
+	}
+	return id[:i], id[i+1:], true
 }
 
 // fromNonEmptyString converts an empty string to null, or wraps a non-empty

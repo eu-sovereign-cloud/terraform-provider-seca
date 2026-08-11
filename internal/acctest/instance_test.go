@@ -45,20 +45,24 @@ func testAccCheckInstanceDestroy(s *terraform.State) error {
 
 func testAccInstanceResourceConfig(sshKey string, labels map[string]string) string {
 	return testAccProviderConfig() + fmt.Sprintf(`
+data "seca_storage_sku" "test" {
+  name = "sku-1"
+}
+
 resource "seca_workspace" "test" {
   name = "workspace-1"
 }
 
 data "seca_instance_sku" "test" {
-  name = "DXS"
+  name = "compute-sku-1"
 }
 
 resource "seca_block_storage" "boot" {
   name         = "boot-vol-1"
-  workspace_id = seca_workspace.test.name
+  workspace_id = seca_workspace.test.id
 
   size_gb = 10
-  sku_id  = "storage-skus/RD500"
+  sku_id  = data.seca_storage_sku.test.id
 
   retry = {
     delay        = 10
@@ -75,7 +79,7 @@ resource "seca_block_storage" "boot" {
 
 resource "seca_instance" "test" {
   name         = "instance-1"
-  workspace_id = seca_workspace.test.name
+  workspace_id = seca_workspace.test.id
 
   sku_id   = data.seca_instance_sku.test.id
   ssh_keys = [%q]
@@ -104,8 +108,8 @@ resource "seca_instance" "test" {
 func testAccInstanceDataSourceConfig(sshKey string, labels map[string]string) string {
 	return testAccInstanceResourceConfig(sshKey, labels) + `
 data "seca_instance" "test" {
-  name         = seca_instance.test.name
-  workspace_id = seca_workspace.test.name
+  name         = "instance-1"
+  workspace_id = seca_workspace.test.id
 }`
 }
 
@@ -121,13 +125,13 @@ func TestAccInstance(t *testing.T) {
 				Config: testAccInstanceResourceConfig(sshKey, map[string]string{"env": "dev"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("seca_instance.test", "name", "instance-1"),
-					resource.TestCheckResourceAttr("seca_instance.test", "workspace_id", "workspace-1"),
+					resource.TestCheckResourceAttr("seca_instance.test", "workspace_id", urnWorkspace("workspace-1")),
 					resource.TestCheckResourceAttr("seca_instance.test", "zone", "zone-a"),
 					resource.TestCheckResourceAttrSet("seca_instance.test", "id"),
-					resource.TestCheckResourceAttrSet("seca_instance.test", "tenant"),
-					resource.TestCheckResourceAttrSet("seca_instance.test", "region"),
+					resource.TestCheckResourceAttr("seca_instance.test", "tenant", testAccTenant),
+					resource.TestCheckResourceAttr("seca_instance.test", "region", testAccRegion),
 					resource.TestCheckResourceAttrSet("seca_instance.test", "power_state"),
-					resource.TestCheckResourceAttr("seca_instance.test", "boot_volume.device_id", "boot-vol-1"),
+					resource.TestCheckResourceAttr("seca_instance.test", "boot_volume.device_id", urnBlockStorage("workspace-1", "boot-vol-1")),
 					resource.TestCheckResourceAttr("seca_instance.test", "labels.env", "dev"),
 				),
 			},
@@ -142,7 +146,7 @@ func TestAccInstance(t *testing.T) {
 				ResourceName:            "seca_instance.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateId:           "workspace-1/instance-1",
+				ImportStateId:           urnWorkspace("workspace-1") + "/instance-1",
 				ImportStateVerifyIgnore: []string{"retry"},
 			},
 			{
@@ -151,6 +155,8 @@ func TestAccInstance(t *testing.T) {
 					resource.TestCheckResourceAttr("seca_instance.test", "name", "instance-1"),
 					resource.TestCheckResourceAttr("seca_instance.test", "labels.env", "prod"),
 					resource.TestCheckResourceAttr("data.seca_instance.test", "name", "instance-1"),
+					resource.TestCheckResourceAttr("data.seca_instance.test", "tenant", testAccTenant),
+					resource.TestCheckResourceAttr("data.seca_instance.test", "region", testAccRegion),
 					resource.TestCheckResourceAttrSet("data.seca_instance.test", "id"),
 					resource.TestCheckResourceAttrSet("data.seca_instance.test", "power_state"),
 					resource.TestCheckResourceAttrSet("data.seca_instance.test", "state"),

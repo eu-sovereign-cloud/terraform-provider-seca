@@ -121,7 +121,7 @@ func (d *NetworkDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	wref := secapi.WorkspaceReference{
 		Tenant:    secapi.TenantID(d.tenant),
-		Workspace: secapi.WorkspaceID(data.WorkspaceId.ValueString()),
+		Workspace: secapi.WorkspaceID(workspaceName(data.WorkspaceId.ValueString())),
 		Name:      data.Name.ValueString(),
 	}
 
@@ -134,13 +134,15 @@ func (d *NetworkDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	data, diags := networkToDataSourceModel(ctx, net)
+	result, diags := networkToDataSourceModel(ctx, net)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	result.WorkspaceId = data.WorkspaceId
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }
 
 func networkToDataSourceModel(ctx context.Context, net *sdk.Network) (NetworkDataSourceModel, diag.Diagnostics) {

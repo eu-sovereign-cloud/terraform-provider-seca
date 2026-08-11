@@ -145,3 +145,34 @@ func (v portRangeValidator) ValidateInt64(_ context.Context, req validator.Int64
 }
 
 func PortRangeValidator() validator.Int64 { return portRangeValidator{} }
+
+type listSizeValidator struct {
+	minItems int
+	maxItems int
+}
+
+func (v listSizeValidator) Description(_ context.Context) string {
+	return fmt.Sprintf("list must contain between %d and %d elements", v.minItems, v.maxItems)
+}
+
+func (v listSizeValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v listSizeValidator) ValidateList(_ context.Context, req validator.ListRequest, resp *validator.ListResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+	size := len(req.ConfigValue.Elements())
+	if size < v.minItems || size > v.maxItems {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Invalid list length",
+			fmt.Sprintf("Expected between %d and %d elements, got: %d", v.minItems, v.maxItems, size),
+		)
+	}
+}
+
+func ListSizeValidator(minItems, maxItems int) validator.List {
+	return listSizeValidator{minItems: minItems, maxItems: maxItems}
+}

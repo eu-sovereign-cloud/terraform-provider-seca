@@ -59,7 +59,7 @@ resource "seca_role" "test" {
 resource "seca_role_assignment" "test" {
   name  = "ra-1"
   subs  = [%s]
-  roles = [seca_role.test.name]
+  roles = ["role-1"]
 
   scopes = [
     {
@@ -99,7 +99,7 @@ resource "seca_role" "test" {
 resource "seca_role_assignment" "test" {
   name  = "ra-1"
   subs  = [%q]
-  roles = [seca_role.test.name]
+  roles = ["role-1"]
 
   scopes = [
     {
@@ -121,7 +121,7 @@ resource "seca_role_assignment" "test" {
 }
 
 data "seca_role_assignment" "test" {
-  name = seca_role_assignment.test.name
+  name =  "ra-1"
 }`, "sa-1", testAccTenant)
 }
 
@@ -165,7 +165,7 @@ func TestAccRoleAssignment(t *testing.T) {
 					resource.TestCheckResourceAttr("data.seca_role_assignment.test", "name", "ra-1"),
 					resource.TestCheckResourceAttr("data.seca_role_assignment.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("data.seca_role_assignment.test", "state", "active"),
-					resource.TestCheckResourceAttr("data.seca_role_assignment.test", "subs.#", "1"),
+					resource.TestCheckResourceAttr("data.seca_role_assignment.test", "subs.#", "2"),
 					resource.TestCheckResourceAttr("data.seca_role_assignment.test", "roles.#", "1"),
 					resource.TestCheckResourceAttr("data.seca_role_assignment.test", "scopes.#", "1"),
 				),

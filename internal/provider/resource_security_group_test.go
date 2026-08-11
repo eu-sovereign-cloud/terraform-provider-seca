@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -63,8 +64,7 @@ func TestSecurityGroupToResourceModel(t *testing.T) {
 	assert.Equal(t, "tenant-1", model.Tenant.ValueString())
 	assert.Equal(t, "seca.network/v1", model.ResourceProvider.ValueString())
 	assert.Equal(t, 2, len(model.Rules.Elements()))
-	assert.False(t, model.RuleRefs.IsNull())
-	assert.Equal(t, 0, len(model.RuleRefs.Elements()))
+	assert.True(t, model.RuleRefs.IsNull())
 }
 
 func TestSecurityGroupToResourceModel_EmptyRules(t *testing.T) {
@@ -74,7 +74,22 @@ func TestSecurityGroupToResourceModel_EmptyRules(t *testing.T) {
 	model, diags := securityGroupToResourceModel(context.Background(), sg)
 	require.False(t, diags.HasError())
 
-	assert.Equal(t, 0, len(model.Rules.Elements()))
+	assert.True(t, model.Rules.IsNull())
+}
+
+func TestSecurityGroupToResourceModel_NoSourceRefs(t *testing.T) {
+	sg := securityGroupFixture()
+	sg.Spec.Rules = []sdk.SecurityGroupRuleSpec{
+		{Direction: sdk.SecurityGroupRuleDirectionIngress},
+	}
+
+	model, diags := securityGroupToResourceModel(context.Background(), sg)
+	require.False(t, diags.HasError())
+
+	require.Equal(t, 1, len(model.Rules.Elements()))
+	rule, ok := model.Rules.Elements()[0].(types.Object)
+	require.True(t, ok)
+	assert.True(t, rule.Attributes()["source_refs"].(types.List).IsNull())
 }
 
 func TestSecurityGroupToResourceModel_WithRuleRefs(t *testing.T) {
@@ -162,5 +177,59 @@ func TestSecurityGroupPortsFromRange(t *testing.T) {
 	assert.False(t, obj.IsNull())
 	attrs := obj.Attributes()
 	assert.Equal(t, types.Int64Value(22), attrs["from"])
-	assert.Equal(t, types.Int64Value(0), attrs["to"])
+	// `omitempty` drops an unset bound, so 0 has to map back to null — a config
+	// can never have asked for port 0.
+	assert.Equal(t, types.Int64Null(), attrs["to"])
+	assert.True(t, attrs["list"].(types.List).IsNull())
+}
+
+func TestSGPreserveRuleShape(t *testing.T) {
+	ctx := context.Background()
+
+	sg := securityGroupFixture()
+	sg.Spec.Rules = []sdk.SecurityGroupRuleSpec{
+		{
+			Direction: sdk.SecurityGroupRuleDirectionIngress,
+			Protocol:  sdk.SecurityGroupRuleProtocolTCP,
+			Ports:     &sdk.Ports{List: []int{80, 443}},
+		},
+	}
+
+	mapped, diags := sgRulesToListValue(ctx, sg.Spec.Rules)
+	require.False(t, diags.HasError())
+
+	sourceRefs := func(list types.List) types.List {
+		rule, ok := list.Elements()[0].(types.Object)
+		require.True(t, ok)
+		return rule.Attributes()["source_refs"].(types.List)
+	}
+
+	// The API drops `source_refs: []`, but a config that wrote it must read it back.
+	require.True(t, sourceRefs(mapped).IsNull())
+
+	configured := types.ListValueMust(types.ObjectType{AttrTypes: sgRuleAttrTypes}, []attr.Value{
+		types.ObjectValueMust(sgRuleAttrTypes, map[string]attr.Value{
+			"direction":   types.StringValue("ingress"),
+			"protocol":    types.StringValue("tcp"),
+			"ports":       types.ObjectValueMust(sgPortsAttrTypes, map[string]attr.Value{"from": types.Int64Null(), "to": types.Int64Null(), "list": types.ListValueMust(types.Int64Type, []attr.Value{types.Int64Value(80), types.Int64Value(443)})}),
+			"source_refs": types.ListValueMust(types.StringType, []attr.Value{}),
+		}),
+	})
+
+	assert.Equal(t, configured, sgPreserveRuleShape(mapped, configured))
+
+	// A config that omitted source_refs keeps null.
+	omitted := types.ListValueMust(types.ObjectType{AttrTypes: sgRuleAttrTypes}, []attr.Value{
+		types.ObjectValueMust(sgRuleAttrTypes, map[string]attr.Value{
+			"direction":   types.StringValue("ingress"),
+			"protocol":    types.StringValue("tcp"),
+			"ports":       types.ObjectValueMust(sgPortsAttrTypes, map[string]attr.Value{"from": types.Int64Null(), "to": types.Int64Null(), "list": types.ListValueMust(types.Int64Type, []attr.Value{types.Int64Value(80), types.Int64Value(443)})}),
+			"source_refs": types.ListNull(types.StringType),
+		}),
+	})
+
+	assert.True(t, sourceRefs(sgPreserveRuleShape(mapped, omitted)).IsNull())
+
+	// A length change is a real diff and reaches state as the API reported it.
+	assert.Equal(t, mapped, sgPreserveRuleShape(mapped, types.ListNull(types.ObjectType{AttrTypes: sgRuleAttrTypes})))
 }

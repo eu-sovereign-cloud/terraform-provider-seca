@@ -102,7 +102,7 @@ func (d *InternetGatewayDataSource) Read(ctx context.Context, req datasource.Rea
 
 	wref := secapi.WorkspaceReference{
 		Tenant:    secapi.TenantID(d.tenant),
-		Workspace: secapi.WorkspaceID(data.WorkspaceId.ValueString()),
+		Workspace: secapi.WorkspaceID(workspaceName(data.WorkspaceId.ValueString())),
 		Name:      data.Name.ValueString(),
 	}
 
@@ -115,13 +115,15 @@ func (d *InternetGatewayDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	data, diags := internetGatewayToDataSourceModel(ctx, gtw)
+	result, diags := internetGatewayToDataSourceModel(ctx, gtw)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	result.WorkspaceId = data.WorkspaceId
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }
 
 func internetGatewayToDataSourceModel(ctx context.Context, gtw *sdk.InternetGateway) (InternetGatewayDataSourceModel, diag.Diagnostics) {

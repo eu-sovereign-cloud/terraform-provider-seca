@@ -9,7 +9,7 @@ import (
 func testAccStorageSkuDataSourceConfig() string {
 	return testAccProviderConfig() + `
 data "seca_storage_sku" "test" {
-  name = "RD500"
+  name = "sku-1"
 }`
 }
 
@@ -21,9 +21,9 @@ func TestAccStorageSku(t *testing.T) {
 			{
 				Config: testAccStorageSkuDataSourceConfig(),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.seca_storage_sku.test", "name", "RD500"),
-					resource.TestCheckResourceAttr("data.seca_storage_sku.test", "tenant", "seca"),
-					resource.TestCheckResourceAttr("data.seca_storage_sku.test", "region", "region"),
+					resource.TestCheckResourceAttr("data.seca_storage_sku.test", "name", "sku-1"),
+					resource.TestCheckResourceAttr("data.seca_storage_sku.test", "tenant", testAccTenant),
+					resource.TestCheckResourceAttr("data.seca_storage_sku.test", "region", testAccRegion),
 					resource.TestCheckResourceAttrSet("data.seca_storage_sku.test", "iops"),
 					resource.TestCheckResourceAttrSet("data.seca_storage_sku.test", "type"),
 					resource.TestCheckResourceAttrSet("data.seca_storage_sku.test", "min_volume_size"),

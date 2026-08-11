@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
@@ -46,8 +45,9 @@ func (r *SubnetResource) Metadata(_ context.Context, req resource.MetadataReques
 }
 
 func (r *SubnetResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	parts := strings.SplitN(req.ID, "/", 3)
-	if len(parts) != 3 || parts[0] == "" || parts[1] == "" || parts[2] == "" {
+	scope, name, ok := cutImportName(req.ID)
+	workspaceID, networkID, scopeOk := cutImportScope(scope, "networks")
+	if !ok || !scopeOk || workspaceID == "" || networkID == "" || name == "" {
 		resp.Diagnostics.AddError(
 			"Unexpected Import Identifier",
 			fmt.Sprintf("Expected import identifier in the format \"workspace_id/network_id/name\", got: %q", req.ID),
@@ -55,9 +55,9 @@ func (r *SubnetResource) ImportState(ctx context.Context, req resource.ImportSta
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("workspace_id"), parts[0])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("network_id"), parts[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), parts[2])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("workspace_id"), workspaceID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("network_id"), networkID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), name)...)
 }
 
 type SubnetCidrModel struct {
@@ -274,6 +274,8 @@ func (r *SubnetResource) Create(ctx context.Context, req resource.CreateRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.WorkspaceId = data.WorkspaceId
+	result.NetworkId = data.NetworkId
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
 
@@ -294,8 +296,8 @@ func (r *SubnetResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 	nref := secapi.NetworkReference{
 		Tenant:    secapi.TenantID(r.tenant),
-		Workspace: secapi.WorkspaceID(data.WorkspaceId.ValueString()),
-		Network:   secapi.NetworkID(data.NetworkId.ValueString()),
+		Workspace: secapi.WorkspaceID(workspaceName(data.WorkspaceId.ValueString())),
+		Network:   secapi.NetworkID(networkName(data.NetworkId.ValueString())),
 		Name:      data.Name.ValueString(),
 	}
 
@@ -317,6 +319,8 @@ func (r *SubnetResource) Read(ctx context.Context, req resource.ReadRequest, res
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.WorkspaceId = data.WorkspaceId
+	result.NetworkId = data.NetworkId
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
 
@@ -376,6 +380,8 @@ func (r *SubnetResource) Update(ctx context.Context, req resource.UpdateRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.WorkspaceId = data.WorkspaceId
+	result.NetworkId = data.NetworkId
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
 
@@ -406,8 +412,8 @@ func (r *SubnetResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	sub := &sdk.Subnet{
 		Metadata: &sdk.RegionalNetworkResourceMetadata{
 			Tenant:    r.tenant,
-			Workspace: data.WorkspaceId.ValueString(),
-			Network:   data.NetworkId.ValueString(),
+			Workspace: workspaceName(data.WorkspaceId.ValueString()),
+			Network:   networkName(data.NetworkId.ValueString()),
 			Name:      data.Name.ValueString(),
 		},
 	}
@@ -443,11 +449,16 @@ func (r *SubnetResource) Delete(ctx context.Context, req resource.DeleteRequest,
 }
 
 func subnetFromModel(tenant string, data SubnetResourceModel) *sdk.Subnet {
+	var cidr SubnetCidrModel
+	if data.Cidr != nil {
+		cidr = *data.Cidr
+	}
+
 	sub := &sdk.Subnet{
 		Metadata: &sdk.RegionalNetworkResourceMetadata{
 			Tenant:    tenant,
-			Workspace: data.WorkspaceId.ValueString(),
-			Network:   data.NetworkId.ValueString(),
+			Workspace: workspaceName(data.WorkspaceId.ValueString()),
+			Network:   networkName(data.NetworkId.ValueString()),
 			Name:      data.Name.ValueString(),
 		},
 		Labels:      toStringMap(data.Labels),
@@ -455,8 +466,8 @@ func subnetFromModel(tenant string, data SubnetResourceModel) *sdk.Subnet {
 		Extensions:  toStringMap(data.Extensions),
 		Spec: sdk.SubnetSpec{
 			Cidr: sdk.Cidr{
-				Ipv4: data.Cidr.Ipv4.ValueString(),
-				Ipv6: data.Cidr.Ipv6.ValueString(),
+				Ipv4: cidr.Ipv4.ValueString(),
+				Ipv6: cidr.Ipv6.ValueString(),
 			},
 			RouteTableRef: sdk.Reference{
 				Resource: data.RouteTableId.ValueString(),

@@ -41,6 +41,8 @@ Check these before anything else. A PR failing any of these must not be merged.
 - [ ] No `RequiresReplace()` on Computed attributes
 - [ ] `RequiresReplace()` is only used for attributes the API does not support in-place updates for
 - [ ] Data source schemas include a `state` field for resources with a status
+- [ ] Every `SingleNestedAttribute` is backed by a **pointer** to its nested model, so the null state left by `ImportState` can be read (see [Nested object fields must be nullable](provider-conventions.md#nested-object-fields-must-be-nullable))
+- [ ] Mappers for `Optional`-only collections return `types.ListNull(...)` for an empty/nil slice, not an empty list — the API's `omitempty` fields read back as nil and `[]` in state where the config had null is an inconsistent result after apply (see [Empty collections on Optional attributes map back to null](provider-conventions.md#empty-collections-on-optional-attributes-map-back-to-null))
 
 ## Async Operations
 

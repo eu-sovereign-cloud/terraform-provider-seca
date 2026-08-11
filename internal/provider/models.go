@@ -177,9 +177,9 @@ type networkModel struct {
 	Annotations types.Map `tfsdk:"annotations"`
 	Extensions  types.Map `tfsdk:"extensions"`
 
-	SkuId           types.String     `tfsdk:"sku_id"`
-	Cidr            NetworkCidrModel `tfsdk:"cidr"`
-	AdditionalCidrs types.List       `tfsdk:"additional_cidrs"`
+	SkuId           types.String      `tfsdk:"sku_id"`
+	Cidr            *NetworkCidrModel `tfsdk:"cidr"`
+	AdditionalCidrs types.List        `tfsdk:"additional_cidrs"`
 }
 
 func networkToBaseModel(ctx context.Context, net *sdk.Network) (networkModel, diag.Diagnostics) {
@@ -208,19 +208,14 @@ func networkToBaseModel(ctx context.Context, net *sdk.Network) (networkModel, di
 	diags.Append(d...)
 	model.Extensions = extensions
 
-	model.SkuId = types.StringValue(net.Spec.SkuRef.Resource)
+	cidr := cidrFromSDK(net.Spec.Cidr)
+	model.Cidr = &cidr
 
-	if net.Status != nil {
-		model.Cidr = cidrFromSDK(net.Status.Cidr)
-		additionalCidrs, d := fromCidrList(ctx, net.Status.AdditionalCidrs)
-		diags.Append(d...)
-		model.AdditionalCidrs = additionalCidrs
-	} else {
-		model.Cidr = cidrFromSDK(net.Spec.Cidr)
-		additionalCidrs, d := fromCidrList(ctx, net.Spec.AdditionalCidrs)
-		diags.Append(d...)
-		model.AdditionalCidrs = additionalCidrs
-	}
+	additionalCidrs, d := fromCidrList(ctx, net.Spec.AdditionalCidrs)
+	model.AdditionalCidrs = additionalCidrs
+	diags.Append(d...)
+
+	model.SkuId = types.StringValue(net.Spec.SkuRef.Resource)
 
 	return model, diags
 }
@@ -436,10 +431,10 @@ type subnetModel struct {
 	Annotations types.Map `tfsdk:"annotations"`
 	Extensions  types.Map `tfsdk:"extensions"`
 
-	Cidr         SubnetCidrModel `tfsdk:"cidr"`
-	RouteTableId types.String    `tfsdk:"route_table_id"`
-	Zone         types.String    `tfsdk:"zone"`
-	SkuId        types.String    `tfsdk:"sku_id"`
+	Cidr         *SubnetCidrModel `tfsdk:"cidr"`
+	RouteTableId types.String     `tfsdk:"route_table_id"`
+	Zone         types.String     `tfsdk:"zone"`
+	SkuId        types.String     `tfsdk:"sku_id"`
 }
 
 func subnetToBaseModel(ctx context.Context, sub *sdk.Subnet) (subnetModel, diag.Diagnostics) {
@@ -469,7 +464,7 @@ func subnetToBaseModel(ctx context.Context, sub *sdk.Subnet) (subnetModel, diag.
 	diags.Append(d...)
 	model.Extensions = extensions
 
-	model.Cidr = SubnetCidrModel{
+	model.Cidr = &SubnetCidrModel{
 		Ipv4: types.StringValue(sub.Spec.Cidr.Ipv4),
 		Ipv6: types.StringValue(sub.Spec.Cidr.Ipv6),
 	}
@@ -757,18 +752,18 @@ type instanceModel struct {
 	Annotations types.Map `tfsdk:"annotations"`
 	Extensions  types.Map `tfsdk:"extensions"`
 
-	SkuId             types.String        `tfsdk:"sku_id"`
-	PrimaryNicId      types.String        `tfsdk:"primary_nic_id"`
-	Zone              types.String        `tfsdk:"zone"`
-	SshKeys           types.List          `tfsdk:"ssh_keys"`
-	BootVolume        instanceVolumeModel `tfsdk:"boot_volume"`
-	DataVolumes       types.List          `tfsdk:"data_volumes"`
-	AdditionalNicIds  types.List          `tfsdk:"additional_nic_ids"`
-	SecurityGroupId   types.String        `tfsdk:"security_group_id"`
-	UserData          types.String        `tfsdk:"user_data"`
-	AntiAffinityGroup types.String        `tfsdk:"anti_affinity_group"`
-	PowerState        types.String        `tfsdk:"power_state"`
-	PowerStateSince   types.String        `tfsdk:"power_state_since"`
+	SkuId             types.String         `tfsdk:"sku_id"`
+	PrimaryNicId      types.String         `tfsdk:"primary_nic_id"`
+	Zone              types.String         `tfsdk:"zone"`
+	SshKeys           types.List           `tfsdk:"ssh_keys"`
+	BootVolume        *instanceVolumeModel `tfsdk:"boot_volume"`
+	DataVolumes       types.List           `tfsdk:"data_volumes"`
+	AdditionalNicIds  types.List           `tfsdk:"additional_nic_ids"`
+	SecurityGroupId   types.String         `tfsdk:"security_group_id"`
+	UserData          types.String         `tfsdk:"user_data"`
+	AntiAffinityGroup types.String         `tfsdk:"anti_affinity_group"`
+	PowerState        types.String         `tfsdk:"power_state"`
+	PowerStateSince   types.String         `tfsdk:"power_state_since"`
 }
 
 func instanceToBaseModel(ctx context.Context, inst *sdk.Instance) (instanceModel, diag.Diagnostics) {
@@ -808,7 +803,7 @@ func instanceToBaseModel(ctx context.Context, inst *sdk.Instance) (instanceModel
 	diags.Append(d...)
 	model.SshKeys = sshKeys
 
-	model.BootVolume = instanceVolumeModel{
+	model.BootVolume = &instanceVolumeModel{
 		DeviceId: types.StringValue(inst.Spec.BootVolume.DeviceRef.Resource),
 	}
 

@@ -63,8 +63,9 @@ func TestRouteTableToResourceModel_EmptyRoutes(t *testing.T) {
 	model, diags := routeTableToResourceModel(context.Background(), rt)
 	require.False(t, diags.HasError())
 
-	assert.False(t, model.Routes.IsNull())
-	assert.Equal(t, 0, len(model.Routes.Elements()))
+	// routes is Optional-only, so an absent spec.routes has to read back as null
+	// — an empty list where the config had none is an inconsistent result.
+	assert.True(t, model.Routes.IsNull())
 }
 
 func TestRouteTableFromModel_RoundTrip(t *testing.T) {

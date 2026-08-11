@@ -84,13 +84,13 @@ output "nic_mac_address" {
 
 ### Required
 
+- `addresses` (List of String)
 - `name` (String)
 - `subnet_id` (String)
 - `workspace_id` (String)
 
 ### Optional
 
-- `addresses` (List of String)
 - `annotations` (Map of String)
 - `extensions` (Map of String)
 - `labels` (Map of String)

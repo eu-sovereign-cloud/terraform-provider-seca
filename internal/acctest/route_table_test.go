@@ -46,26 +46,30 @@ func testAccCheckRouteTableDestroy(s *terraform.State) error {
 
 func testAccRouteTableResourceConfig(labels map[string]string) string {
 	return testAccProviderConfig() + fmt.Sprintf(`
+data "seca_network_sku" "test" {
+  name = "network-sku-1"
+}
+
 resource "seca_workspace" "test" {
   name = "workspace-1"
 }
 resource "seca_network" "test" {
   name         = "network-1"
-  workspace_id = seca_workspace.test.name
+  workspace_id = seca_workspace.test.id
 
-  sku_id = "N10K"
+  sku_id = data.seca_network_sku.test.id
   cidr = {
     ipv4 = "10.0.0.0/16"
   }
 }
 resource "seca_internet_gateway" "test" {
   name         = "internet-gateway-1"
-  workspace_id = seca_workspace.test.name
+  workspace_id = seca_workspace.test.id
 }
 resource "seca_route_table" "test" {
   name         = "route-table-1"
-  workspace_id = seca_workspace.test.name
-  network_id   = seca_network.test.name
+  workspace_id = seca_workspace.test.id
+  network_id   = seca_network.test.id
 
   routes = [
     {
@@ -91,26 +95,30 @@ resource "seca_route_table" "test" {
 
 func testAccRouteTableUpdateConfig(labels map[string]string) string {
 	return testAccProviderConfig() + fmt.Sprintf(`
+data "seca_network_sku" "test" {
+  name = "network-sku-1"
+}
+
 resource "seca_workspace" "test" {
   name = "workspace-1"
 }
 resource "seca_network" "test" {
   name         = "network-1"
-  workspace_id = seca_workspace.test.name
+  workspace_id = seca_workspace.test.id
 
-  sku_id = "N10K"
+  sku_id = data.seca_network_sku.test.id
   cidr = {
     ipv4 = "10.0.0.0/16"
   }
 }
 resource "seca_internet_gateway" "test" {
   name         = "internet-gateway-1"
-  workspace_id = seca_workspace.test.name
+  workspace_id = seca_workspace.test.id
 }
 resource "seca_route_table" "test" {
   name         = "route-table-1"
-  workspace_id = seca_workspace.test.name
-  network_id   = seca_network.test.name
+  workspace_id = seca_workspace.test.id
+  network_id   = seca_network.test.id
 
   routes = [
     {
@@ -140,26 +148,30 @@ resource "seca_route_table" "test" {
 
 func testAccRouteTableDataSourceConfig(labels map[string]string) string {
 	return testAccProviderConfig() + fmt.Sprintf(`
+data "seca_network_sku" "test" {
+  name = "network-sku-1"
+}
+
 resource "seca_workspace" "test" {
   name = "workspace-1"
 }
 resource "seca_network" "test" {
   name         = "network-1"
-  workspace_id = seca_workspace.test.name
+  workspace_id = seca_workspace.test.id
 
-  sku_id = "N10K"
+  sku_id = data.seca_network_sku.test.id
   cidr = {
     ipv4 = "10.0.0.0/16"
   }
 }
 resource "seca_internet_gateway" "test" {
   name         = "internet-gateway-1"
-  workspace_id = seca_workspace.test.name
+  workspace_id = seca_workspace.test.id
 }
 resource "seca_route_table" "test" {
   name         = "route-table-1"
-  workspace_id = seca_workspace.test.name
-  network_id   = seca_network.test.name
+  workspace_id = seca_workspace.test.id
+  network_id   = seca_network.test.id
 
   routes = [
     {
@@ -182,8 +194,8 @@ resource "seca_route_table" "test" {
 }
 data "seca_route_table" "test" {
   name         = "route-table-1"
-  workspace_id = seca_workspace.test.name
-  network_id   = seca_network.test.name
+  workspace_id = seca_workspace.test.id
+  network_id   = seca_network.test.id
 }`, formatLabels(labels))
 }
 
@@ -197,8 +209,8 @@ func TestAccRouteTable(t *testing.T) {
 				Config: testAccRouteTableResourceConfig(map[string]string{"env": "dev"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("seca_route_table.test", "name", "route-table-1"),
-					resource.TestCheckResourceAttr("seca_route_table.test", "workspace_id", "workspace-1"),
-					resource.TestCheckResourceAttr("seca_route_table.test", "network_id", "network-1"),
+					resource.TestCheckResourceAttr("seca_route_table.test", "workspace_id", urnWorkspace("workspace-1")),
+					resource.TestCheckResourceAttr("seca_route_table.test", "network_id", urnNetwork("workspace-1", "network-1")),
 					resource.TestCheckResourceAttr("seca_route_table.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("seca_route_table.test", "region", testAccRegion),
 					resource.TestCheckResourceAttr("seca_route_table.test", "routes.#", "1"),
@@ -218,19 +230,19 @@ func TestAccRouteTable(t *testing.T) {
 				ResourceName:            "seca_route_table.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateId:           "workspace-1/network-1/route-table-1",
+				ImportStateId:           urnWorkspace("workspace-1") + "/" + urnNetwork("workspace-1", "network-1") + "/route-table-1",
 				ImportStateVerifyIgnore: []string{"retry"},
 			},
 			{
 				Config: testAccRouteTableDataSourceConfig(map[string]string{"env": "prod"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("seca_route_table.test", "name", "route-table-1"),
-					resource.TestCheckResourceAttr("seca_route_table.test", "workspace_id", "workspace-1"),
-					resource.TestCheckResourceAttr("seca_route_table.test", "network_id", "network-1"),
+					resource.TestCheckResourceAttr("seca_route_table.test", "workspace_id", urnWorkspace("workspace-1")),
+					resource.TestCheckResourceAttr("seca_route_table.test", "network_id", urnNetwork("workspace-1", "network-1")),
 
 					resource.TestCheckResourceAttr("data.seca_route_table.test", "name", "route-table-1"),
-					resource.TestCheckResourceAttr("data.seca_route_table.test", "workspace_id", "workspace-1"),
-					resource.TestCheckResourceAttr("data.seca_route_table.test", "network_id", "network-1"),
+					resource.TestCheckResourceAttr("data.seca_route_table.test", "workspace_id", urnWorkspace("workspace-1")),
+					resource.TestCheckResourceAttr("data.seca_route_table.test", "network_id", urnNetwork("workspace-1", "network-1")),
 					resource.TestCheckResourceAttr("data.seca_route_table.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("data.seca_route_table.test", "region", testAccRegion),
 					resource.TestCheckResourceAttr("data.seca_route_table.test", "state", "active"),

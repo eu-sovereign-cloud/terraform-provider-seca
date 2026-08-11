@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
@@ -53,7 +52,7 @@ type InstanceResourceModel struct {
 }
 
 func (r *InstanceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	workspaceID, name, ok := strings.Cut(req.ID, "/")
+	workspaceID, name, ok := cutImportName(req.ID)
 	if !ok || workspaceID == "" || name == "" {
 		resp.Diagnostics.AddError(
 			"Unexpected Import Identifier",
@@ -315,6 +314,7 @@ func (r *InstanceResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.WorkspaceId = data.WorkspaceId
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
 
@@ -335,7 +335,7 @@ func (r *InstanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	wref := secapi.WorkspaceReference{
 		Tenant:    secapi.TenantID(r.tenant),
-		Workspace: secapi.WorkspaceID(data.WorkspaceId.ValueString()),
+		Workspace: secapi.WorkspaceID(workspaceName(data.WorkspaceId.ValueString())),
 		Name:      data.Name.ValueString(),
 	}
 
@@ -357,6 +357,7 @@ func (r *InstanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.WorkspaceId = data.WorkspaceId
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
 
@@ -421,6 +422,7 @@ func (r *InstanceResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	result.WorkspaceId = data.WorkspaceId
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
 
@@ -451,7 +453,7 @@ func (r *InstanceResource) Delete(ctx context.Context, req resource.DeleteReques
 	inst := &sdk.Instance{
 		Metadata: &sdk.RegionalWorkspaceResourceMetadata{
 			Tenant:    r.tenant,
-			Workspace: data.WorkspaceId.ValueString(),
+			Workspace: workspaceName(data.WorkspaceId.ValueString()),
 			Name:      data.Name.ValueString(),
 		},
 	}
@@ -490,10 +492,15 @@ func (r *InstanceResource) Delete(ctx context.Context, req resource.DeleteReques
 func instanceFromModel(ctx context.Context, tenant string, data InstanceResourceModel) (*sdk.Instance, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	var bootVolume instanceVolumeModel
+	if data.BootVolume != nil {
+		bootVolume = *data.BootVolume
+	}
+
 	inst := &sdk.Instance{
 		Metadata: &sdk.RegionalWorkspaceResourceMetadata{
 			Tenant:    tenant,
-			Workspace: data.WorkspaceId.ValueString(),
+			Workspace: workspaceName(data.WorkspaceId.ValueString()),
 			Name:      data.Name.ValueString(),
 		},
 		Labels:      toStringMap(data.Labels),
@@ -505,7 +512,7 @@ func instanceFromModel(ctx context.Context, tenant string, data InstanceResource
 			},
 			BootVolume: sdk.VolumeReference{
 				DeviceRef: sdk.Reference{
-					Resource: data.BootVolume.DeviceId.ValueString(),
+					Resource: bootVolume.DeviceId.ValueString(),
 				},
 			},
 		},

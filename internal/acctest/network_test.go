@@ -45,14 +45,18 @@ func testAccCheckNetworkDestroy(s *terraform.State) error {
 
 func testAccNetworkResourceConfig(labels map[string]string) string {
 	return testAccProviderConfig() + fmt.Sprintf(`
+data "seca_network_sku" "test" {
+  name = "network-sku-1"
+}
+
 resource "seca_workspace" "test" {
   name = "workspace-1"
 }
 resource "seca_network" "test" {
   name         = "network-1"
-  workspace_id = seca_workspace.test.name
+  workspace_id = seca_workspace.test.id
 
-  sku_id = "N10K"
+  sku_id = data.seca_network_sku.test.id
   cidr = {
     ipv4 = "10.0.0.0/16"
   }
@@ -74,14 +78,18 @@ resource "seca_network" "test" {
 
 func testAccNetworkDataSourceConfig(labels map[string]string) string {
 	return testAccProviderConfig() + fmt.Sprintf(`
+data "seca_network_sku" "test" {
+  name = "network-sku-1"
+}
+
 resource "seca_workspace" "test" {
   name = "workspace-1"
 }
 resource "seca_network" "test" {
   name         = "network-1"
-  workspace_id = seca_workspace.test.name
+  workspace_id = seca_workspace.test.id
 
-  sku_id = "N10K"
+  sku_id = data.seca_network_sku.test.id
   cidr = {
     ipv4 = "10.0.0.0/16"
   }
@@ -100,7 +108,7 @@ resource "seca_network" "test" {
 }
 data "seca_network" "test" {
   name         = "network-1"
-  workspace_id = seca_workspace.test.name
+  workspace_id = seca_workspace.test.id
 }`, formatLabels(labels))
 }
 
@@ -114,10 +122,10 @@ func TestAccNetwork(t *testing.T) {
 				Config: testAccNetworkResourceConfig(map[string]string{"env": "dev"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("seca_network.test", "name", "network-1"),
-					resource.TestCheckResourceAttr("seca_network.test", "workspace_id", "workspace-1"),
+					resource.TestCheckResourceAttr("seca_network.test", "workspace_id", urnWorkspace("workspace-1")),
 					resource.TestCheckResourceAttr("seca_network.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("seca_network.test", "region", testAccRegion),
-					resource.TestCheckResourceAttr("seca_network.test", "sku_id", "N10K"),
+					resource.TestCheckResourceAttr("seca_network.test", "sku_id", urnNetworkSku("network-sku-1")),
 					resource.TestCheckResourceAttr("seca_network.test", "cidr.ipv4", "10.0.0.0/16"),
 					resource.TestCheckResourceAttr("seca_network.test", "labels.env", "dev"),
 				),
@@ -133,21 +141,21 @@ func TestAccNetwork(t *testing.T) {
 				ResourceName:            "seca_network.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateId:           "workspace-1/network-1",
+				ImportStateId:           urnWorkspace("workspace-1") + "/network-1",
 				ImportStateVerifyIgnore: []string{"retry"},
 			},
 			{
 				Config: testAccNetworkDataSourceConfig(map[string]string{"env": "prod"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("seca_network.test", "name", "network-1"),
-					resource.TestCheckResourceAttr("seca_network.test", "workspace_id", "workspace-1"),
-					resource.TestCheckResourceAttr("seca_network.test", "sku_id", "N10K"),
+					resource.TestCheckResourceAttr("seca_network.test", "workspace_id", urnWorkspace("workspace-1")),
+					resource.TestCheckResourceAttr("seca_network.test", "sku_id", urnNetworkSku("network-sku-1")),
 
 					resource.TestCheckResourceAttr("data.seca_network.test", "name", "network-1"),
-					resource.TestCheckResourceAttr("data.seca_network.test", "workspace_id", "workspace-1"),
+					resource.TestCheckResourceAttr("data.seca_network.test", "workspace_id", urnWorkspace("workspace-1")),
 					resource.TestCheckResourceAttr("data.seca_network.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("data.seca_network.test", "region", testAccRegion),
-					resource.TestCheckResourceAttr("data.seca_network.test", "sku_id", "N10K"),
+					resource.TestCheckResourceAttr("data.seca_network.test", "sku_id", urnNetworkSku("network-sku-1")),
 					resource.TestCheckResourceAttr("data.seca_network.test", "cidr.ipv4", "10.0.0.0/16"),
 					resource.TestCheckResourceAttr("data.seca_network.test", "state", "active"),
 				),
