@@ -89,7 +89,9 @@ func TestSecurityGroupToResourceModel_NoSourceRefs(t *testing.T) {
 	require.Equal(t, 1, len(model.Rules.Elements()))
 	rule, ok := model.Rules.Elements()[0].(types.Object)
 	require.True(t, ok)
-	assert.True(t, rule.Attributes()["source_refs"].(types.List).IsNull())
+	sourceRefs, ok := rule.Attributes()["source_refs"].(types.List)
+	require.True(t, ok)
+	assert.True(t, sourceRefs.IsNull())
 }
 
 func TestSecurityGroupToResourceModel_WithRuleRefs(t *testing.T) {
@@ -180,7 +182,9 @@ func TestSecurityGroupPortsFromRange(t *testing.T) {
 	// `omitempty` drops an unset bound, so 0 has to map back to null — a config
 	// can never have asked for port 0.
 	assert.Equal(t, types.Int64Null(), attrs["to"])
-	assert.True(t, attrs["list"].(types.List).IsNull())
+	list, ok := attrs["list"].(types.List)
+	require.True(t, ok)
+	assert.True(t, list.IsNull())
 }
 
 func TestSGPreserveRuleShape(t *testing.T) {
@@ -201,7 +205,9 @@ func TestSGPreserveRuleShape(t *testing.T) {
 	sourceRefs := func(list types.List) types.List {
 		rule, ok := list.Elements()[0].(types.Object)
 		require.True(t, ok)
-		return rule.Attributes()["source_refs"].(types.List)
+		refs, ok := rule.Attributes()["source_refs"].(types.List)
+		require.True(t, ok)
+		return refs
 	}
 
 	// The API drops `source_refs: []`, but a config that wrote it must read it back.
