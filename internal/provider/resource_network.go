@@ -276,6 +276,7 @@ func (r *NetworkResource) Create(ctx context.Context, req resource.CreateRequest
 	result.WorkspaceId = data.WorkspaceId
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
+	mergePlanCidr(result.Cidr, data.Cidr)
 
 	tflog.Info(ctx, "network created")
 
@@ -378,6 +379,7 @@ func (r *NetworkResource) Update(ctx context.Context, req resource.UpdateRequest
 	result.WorkspaceId = data.WorkspaceId
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
+	mergePlanCidr(result.Cidr, data.Cidr)
 
 	tflog.Info(ctx, "network updated")
 
@@ -489,6 +491,24 @@ func cidrFromSDK(c sdk.Cidr) NetworkCidrModel {
 	return NetworkCidrModel{
 		Ipv4: fromNonEmptyString(c.Ipv4),
 		Ipv6: fromNonEmptyString(c.Ipv6),
+	}
+}
+
+// mergePlanCidr fills any null CIDR subfields in result from the corresponding
+// plan field. This guards against APIs that do not echo the CIDR back in the
+// poll response: since cidr has RequiresReplace, the value cannot change, so
+// using the plan value is always safe.
+// Only known (non-null, non-unknown) plan values are copied; unknown plan
+// values are not copied into state.
+func mergePlanCidr(result, plan *NetworkCidrModel) {
+	if result == nil || plan == nil {
+		return
+	}
+	if result.Ipv4.IsNull() && !plan.Ipv4.IsNull() && !plan.Ipv4.IsUnknown() {
+		result.Ipv4 = plan.Ipv4
+	}
+	if result.Ipv6.IsNull() && !plan.Ipv6.IsNull() && !plan.Ipv6.IsUnknown() {
+		result.Ipv6 = plan.Ipv6
 	}
 }
 

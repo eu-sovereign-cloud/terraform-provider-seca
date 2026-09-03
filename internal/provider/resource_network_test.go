@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -119,4 +120,47 @@ func TestNetworkToResourceModel_NoStatus(t *testing.T) {
 
 	// Falls back to spec when status is nil
 	assert.Equal(t, "10.100.0.0/16", model.Cidr.Ipv4.ValueString())
+}
+
+func TestMergePlanCidr(t *testing.T) {
+	t.Run("fills null ipv4 from plan", func(t *testing.T) {
+		result := &NetworkCidrModel{Ipv4: types.StringNull(), Ipv6: types.StringNull()}
+		plan := &NetworkCidrModel{Ipv4: types.StringValue("10.100.0.0/16"), Ipv6: types.StringNull()}
+		mergePlanCidr(result, plan)
+		assert.Equal(t, "10.100.0.0/16", result.Ipv4.ValueString())
+		assert.True(t, result.Ipv6.IsNull())
+	})
+
+	t.Run("does not overwrite non-null api value", func(t *testing.T) {
+		result := &NetworkCidrModel{Ipv4: types.StringValue("10.0.0.0/8"), Ipv6: types.StringNull()}
+		plan := &NetworkCidrModel{Ipv4: types.StringValue("10.100.0.0/16"), Ipv6: types.StringNull()}
+		mergePlanCidr(result, plan)
+		assert.Equal(t, "10.0.0.0/8", result.Ipv4.ValueString())
+	})
+
+	t.Run("fills null ipv6 from plan", func(t *testing.T) {
+		result := &NetworkCidrModel{Ipv4: types.StringNull(), Ipv6: types.StringNull()}
+		plan := &NetworkCidrModel{Ipv4: types.StringNull(), Ipv6: types.StringValue("fd00::/56")}
+		mergePlanCidr(result, plan)
+		assert.True(t, result.Ipv4.IsNull())
+		assert.Equal(t, "fd00::/56", result.Ipv6.ValueString())
+	})
+
+	t.Run("nil result is no-op", func(t *testing.T) {
+		plan := &NetworkCidrModel{Ipv4: types.StringValue("10.100.0.0/16")}
+		mergePlanCidr(nil, plan) // must not panic
+	})
+
+	t.Run("nil plan is no-op", func(t *testing.T) {
+		result := &NetworkCidrModel{Ipv4: types.StringNull()}
+		mergePlanCidr(result, nil) // must not panic
+		assert.True(t, result.Ipv4.IsNull())
+	})
+
+	t.Run("does not copy unknown ipv6 from plan (optional+computed not set by user)", func(t *testing.T) {
+		result := &NetworkCidrModel{Ipv4: types.StringValue("10.100.0.0/16"), Ipv6: types.StringNull()}
+		plan := &NetworkCidrModel{Ipv4: types.StringValue("10.100.0.0/16"), Ipv6: types.StringUnknown()}
+		mergePlanCidr(result, plan)
+		assert.True(t, result.Ipv6.IsNull(), "unknown plan value must not be copied into state")
+	})
 }
