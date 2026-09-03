@@ -499,7 +499,7 @@ func cidrFromSDK(c sdk.Cidr) NetworkCidrModel {
 // poll response: since cidr has RequiresReplace, the value cannot change, so
 // using the plan value is always safe.
 // Only known (non-null, non-unknown) plan values are copied; unknown plan
-// values mean the user did not set the field so the API result (null) is kept.
+// values are not copied into state.
 func mergePlanCidr(result, plan *NetworkCidrModel) {
 	if result == nil || plan == nil {
 		return
@@ -512,15 +512,6 @@ func mergePlanCidr(result, plan *NetworkCidrModel) {
 	}
 }
 
-func mergeCidr(status, spec sdk.Cidr) sdk.Cidr {
-	if status.Ipv4 == "" {
-		status.Ipv4 = spec.Ipv4
-	}
-	if status.Ipv6 == "" {
-		status.Ipv6 = spec.Ipv6
-	}
-	return status
-}
 func fromCidrList(ctx context.Context, cidrs []sdk.Cidr) (types.List, diag.Diagnostics) {
 	if len(cidrs) == 0 {
 		return types.ListNull(types.ObjectType{AttrTypes: networkCidrAttrTypes}), nil
