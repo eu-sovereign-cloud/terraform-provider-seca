@@ -5,6 +5,7 @@ Complete, runnable configurations that combine multiple resources to show how th
 | File | Scenario |
 |---|---|
 | [`simple-server-with-public-ip.tf`](simple-server-with-public-ip.tf) | Smallest end-to-end setup: workspace, routed network/subnet, security group, and a single instance with a public IP. |
+| [`instance-from-catalog-image.tf`](instance-from-catalog-image.tf) | Boot volume created from a public catalog image via `source_image_id`, with the default route pointing at a reserved public IP instead of an internet gateway. |
 | [`bastion-host.tf`](bastion-host.tf) | A single public-facing bastion is the only path to a private app instance, which has no public IP and only accepts SSH from the bastion. |
 | [`private-secure-workspace.tf`](private-secure-workspace.tf) | Fully private instance: egress-only internet gateway, security group restricted to the corporate network, no `seca_public_ip` anywhere. |
 | [`three-tier-web-app.tf`](three-tier-web-app.tf) | Web/app/db subnets each with their own scoped security group and one instance per tier; the web tier gets a reserved public IP. |
