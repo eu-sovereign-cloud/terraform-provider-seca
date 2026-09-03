@@ -398,13 +398,13 @@ func nicToBaseModel(ctx context.Context, nic *sdk.Nic) (nicModel, diag.Diagnosti
 
 	model.SkuId = fromRefPtr(nic.Spec.SkuRef)
 
+	publicIpIds, d := refsToStringListFromRefs(nic.Spec.PublicIpRefs)
+	diags.Append(d...)
+	model.PublicIpIds = publicIpIds
+
 	if nic.Status != nil {
-		publicIpIds, d := refsToStringListFromRefs(nic.Status.PublicIpRefs)
-		diags.Append(d...)
-		model.PublicIpIds = publicIpIds
 		model.MacAddress = types.StringValue(nic.Status.MacAddress)
 	} else {
-		model.PublicIpIds = types.ListValueMust(types.StringType, []attr.Value{})
 		model.MacAddress = types.StringNull()
 	}
 

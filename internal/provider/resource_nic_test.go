@@ -29,6 +29,7 @@ func nicFixture() *sdk.Nic {
 			SubnetRef:         sdk.Reference{Resource: "subnets/subnet-1"},
 			Addresses:         []string{"10.0.1.10"},
 			SkuRef:            &sdk.Reference{Resource: "network-skus/sku-1"},
+			PublicIpRefs:      []sdk.Reference{{Resource: "public-ips/ip-1"}},
 			SecurityGroupRefs: []sdk.Reference{{Resource: "security-groups/sg-1"}},
 		},
 		Status: &sdk.NicStatus{
@@ -66,7 +67,7 @@ func TestNicToResourceModel_NilStatus(t *testing.T) {
 	require.False(t, diags.HasError())
 
 	assert.True(t, model.MacAddress.IsNull())
-	assert.Equal(t, 0, len(model.PublicIpIds.Elements()))
+	assert.Equal(t, 1, len(model.PublicIpIds.Elements()))
 }
 
 func TestNicToResourceModel_EmptyAddresses(t *testing.T) {
@@ -100,6 +101,7 @@ func TestNicFromModel_RoundTrip(t *testing.T) {
 func TestNicFromModel_NullOptionalRefs(t *testing.T) {
 	nic := nicFixture()
 	nic.Spec.SkuRef = nil
+	nic.Spec.PublicIpRefs = nil
 	nic.Spec.SecurityGroupRefs = nil
 	nic.Status = nil
 
