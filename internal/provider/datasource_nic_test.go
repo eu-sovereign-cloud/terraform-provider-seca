@@ -31,9 +31,10 @@ func TestNicToDataSourceModel(t *testing.T) {
 		Annotations: sdk.Annotations{"team": "network"},
 		Extensions:  sdk.Extensions{"ext": "v1"},
 		Spec: sdk.NicSpec{
-			SubnetRef: sdk.Reference{Resource: "subnets/subnet-1"},
-			Addresses: []string{"10.0.1.10"},
-			SkuRef:    &sdk.Reference{Resource: "network-skus/sku-1"},
+			SubnetRef:    sdk.Reference{Resource: "subnets/subnet-1"},
+			Addresses:    []string{"10.0.1.10"},
+			SkuRef:       &sdk.Reference{Resource: "network-skus/sku-1"},
+			PublicIpRefs: []sdk.Reference{{Resource: "public-ips/ip-1"}},
 		},
 		Status: &sdk.NicStatus{
 			MacAddress:   "aa:bb:cc:dd:ee:ff",
