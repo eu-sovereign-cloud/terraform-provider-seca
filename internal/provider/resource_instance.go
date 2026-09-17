@@ -309,6 +309,29 @@ func (r *InstanceResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
+	tflog.Debug(ctx, "starting instance ", map[string]any{"name": inst.Metadata.Name, "workspace": inst.Metadata.Workspace, "tenant": inst.Metadata.Tenant})
+
+	if err := r.client.ComputeV1.StartInstance(ctx, inst); err != nil {
+		resp.Diagnostics.AddError(
+			"Error starting instance",
+			"An error was encountered when starting the instance.\nError: "+err.Error(),
+		)
+		return
+	}
+
+	tflog.Debug(ctx, "waiting for instance to power on", map[string]any{"name": inst.Metadata.Name, "workspace": inst.Metadata.Workspace, "tenant": inst.Metadata.Tenant})
+
+	powerConfig := r.retry.with(data.Retry).withTimeout(createTimeout).untilPowerState(sdk.InstanceStatusPowerStateOn)
+
+	inst, err = r.client.ComputeV1.GetInstanceUntilPowerState(ctx, wref, powerConfig)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading instance",
+			"An error was encountered while waiting for the instance to power on.\nError: "+err.Error(),
+		)
+		return
+	}
+
 	result, diags := instanceToResourceModel(ctx, inst)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -318,7 +341,7 @@ func (r *InstanceResource) Create(ctx context.Context, req resource.CreateReques
 	result.Retry = data.Retry
 	result.Timeouts = data.Timeouts
 
-	tflog.Info(ctx, "instance created")
+	tflog.Info(ctx, "instance created", map[string]any{"name": inst.Metadata.Name, "workspace": inst.Metadata.Workspace, "tenant": inst.Metadata.Tenant})
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &result)...)
 }

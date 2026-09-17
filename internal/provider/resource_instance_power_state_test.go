@@ -16,9 +16,10 @@ import (
 //
 // Design decision (GA-29, Option A): power_state and power_state_since are
 // read-only Computed attributes. They reflect the live power state returned by
-// the API and are never settable by the operator. This follows the aws_instance
-// precedent. Power-state control via Terraform is out of scope for the initial
-// implementation.
+// the API and are never directly settable by the operator; there is no desired-state
+// attribute. This follows the aws_instance precedent. Note that Create() still starts
+// the instance automatically (see InstanceResource.Create), since a newly created
+// instance is not considered provisioned until it reaches power state "on".
 func TestInstanceToResourceModel_PowerState(t *testing.T) {
 	powerStateSince := time.Date(2024, 6, 1, 12, 0, 0, 0, time.UTC)
 

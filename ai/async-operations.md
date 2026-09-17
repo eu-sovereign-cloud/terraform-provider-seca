@@ -129,6 +129,10 @@ The polling reference type depends on the resource scope:
 
 Always use the **result from the initial API call** to populate the reference (e.g., `result.Metadata.Tenant`), not the values from the Terraform model. This is because the API may assign or normalize field values.
 
+## Instance Power-On (seca_instance only)
+
+`seca_instance.Create()` adds a step after the resource reaches `Active`: it calls `ComputeV1.StartInstance()` and polls `GetInstanceUntilPowerState(sdk.InstanceStatusPowerStateOn)` (via `retryConfig.untilPowerState`) before writing state. An instance that exists but is not powered on is not considered provisioned. `Update()` does not touch power state — only `Create()` starts the instance. `power_state`/`power_state_since` remain read-only Computed attributes; there is no desired-state attribute for start/stop.
+
 ## Delete Operations
 
 `Delete()` submits the deletion with `DeleteXxx()`, then polls `WatchXxxUntilDeleted(ctx, ref, config)` — using the same reference and the same resolved retry config (`resource.retry.with(data.Retry).withTimeout(deleteTimeout).observer()`) as the Create/Update polling — before returning. This ensures the resource is fully gone on the API side, so a subsequent create of a same-named resource does not conflict. On a polling error, surface it with the read verb: `resp.Diagnostics.AddError("Error reading Xxx", "...while waiting for the Xxx to become deleted.\nError: "+err.Error())`.
