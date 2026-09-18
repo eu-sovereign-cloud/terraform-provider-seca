@@ -74,6 +74,15 @@ func (c retryConfig) untilState(states ...sdk.ResourceState) secapi.ResourceObse
 	}
 }
 
+func (c retryConfig) untilPowerState(states ...sdk.InstanceStatusPowerState) secapi.ResourceObserverUntilValueConfig[sdk.InstanceStatusPowerState] {
+	return secapi.ResourceObserverUntilValueConfig[sdk.InstanceStatusPowerState]{
+		ExpectedValues: states,
+		Delay:          c.delay,
+		Interval:       c.interval,
+		MaxAttempts:    c.maxAttempts,
+	}
+}
+
 func (c retryConfig) observer() secapi.ResourceObserverConfig {
 	return secapi.ResourceObserverConfig{
 		Delay:       c.delay,

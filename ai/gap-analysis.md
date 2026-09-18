@@ -424,7 +424,7 @@ The provider has a clean, consistent architecture and a well-documented AI scaff
 
 **GA-29 — Instance power-state lifecycle**
 - Background: SDK provides `StartInstance`, `StopInstance`, `RestartInstance`, `GetInstanceUntilPowerState`.
-- Requirements: decide whether to expose desired power state as a Terraform attribute (Optional, triggers Start/Stop in Update) or as a separate resource. Document design decision in this issue before implementing. Computed `power_state`, `power_state_since` regardless.
+- Resolved (Option A): `power_state`/`power_state_since` are read-only Computed attributes with no desired-state attribute exposed. However, `Create()` calls `StartInstance` and polls `GetInstanceUntilPowerState(on)` after the resource reaches `Active`, since an instance that is not started is not considered provisioned. `Update()` does not start/stop the instance.
 - Labels: `feature`, `compute`, `design-decision` · Complexity: L · Milestone: M3
 
 **GA-30 — `seca_instance` data source**

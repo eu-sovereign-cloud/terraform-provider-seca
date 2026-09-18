@@ -130,7 +130,7 @@ func TestAccInstance(t *testing.T) {
 					resource.TestCheckResourceAttrSet("seca_instance.test", "id"),
 					resource.TestCheckResourceAttr("seca_instance.test", "tenant", testAccTenant),
 					resource.TestCheckResourceAttr("seca_instance.test", "region", testAccRegion),
-					resource.TestCheckResourceAttrSet("seca_instance.test", "power_state"),
+					resource.TestCheckResourceAttr("seca_instance.test", "power_state", "on"),
 					resource.TestCheckResourceAttr("seca_instance.test", "boot_volume.device_id", urnBlockStorage(testAccWorkspaceName, testAccBootVolumeName)),
 					resource.TestCheckResourceAttr("seca_instance.test", "labels.env", "dev"),
 				),
